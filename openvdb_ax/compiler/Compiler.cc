@@ -55,6 +55,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/SourceMgr.h> // SMDiagnostic
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Config/llvm-config.h>
 
 // @note  As of adding support for LLVM 5.0 we not longer explicitly
 // perform standrd compiler passes (-std-compile-opts) based on the changes
@@ -126,10 +127,16 @@ void initialize()
     llvm::initializeAnalysis(registry);
     llvm::initializeTransformUtils(registry);
     llvm::initializeInstCombine(registry);
+#if LLVM_VERSION_MAJOR > 6
+    llvm::initializeAggressiveInstCombine(registry);
+#endif
     llvm::initializeInstrumentation(registry);
     llvm::initializeTarget(registry);
     // For codegen passes, only passes that do IR to IR transformation are
     // supported.
+#if LLVM_VERSION_MAJOR > 5
+    llvm::initializeExpandMemCmpPassPass(registry);
+#endif
     llvm::initializeScalarizeMaskedMemIntrinPass(registry);
     llvm::initializeCodeGenPreparePass(registry);
     llvm::initializeAtomicExpandPass(registry);
@@ -140,10 +147,27 @@ void initialize()
     llvm::initializeSjLjEHPreparePass(registry);
     llvm::initializePreISelIntrinsicLoweringLegacyPassPass(registry);
     llvm::initializeGlobalMergePass(registry);
+#if LLVM_VERSION_MAJOR > 6
+    llvm::initializeIndirectBrExpandPassPass(registry);
+#endif
+#if LLVM_VERSION_MAJOR > 7
+    llvm::initializeInterleavedLoadCombinePass(registry);
+#endif
     llvm::initializeInterleavedAccessPass(registry);
+#if LLVM_VERSION_MAJOR > 5
+    llvm::initializeEntryExitInstrumenterPass(registry);
+    llvm::initializePostInlineEntryExitInstrumenterPass(registry);
+#else
     llvm::initializeCountingFunctionInserterPass(registry);
+#endif
     llvm::initializeUnreachableBlockElimLegacyPassPass(registry);
     llvm::initializeExpandReductionsPass(registry);
+#if LLVM_VERSION_MAJOR > 6
+    llvm::initializeWasmEHPreparePass(registry);
+#endif
+#if LLVM_VERSION_MAJOR > 5
+    llvm::initializeWriteBitcodePassPass(registry);
+#endif
 
     sIsInitialized = true;
 }
@@ -153,6 +177,7 @@ void uninitialize()
     tbb::mutex::scoped_lock lock(sInitMutex);
     if (!sIsInitialized) return;
 
+    // @todo consider replacing with storage to Support/InitLLVM
     llvm::llvm_shutdown();
 
     sIsInitialized = false;
