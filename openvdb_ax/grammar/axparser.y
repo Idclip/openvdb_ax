@@ -35,7 +35,7 @@
     #include <openvdb_ax/ast/AST.h>
     #include <openvdb_ax/ast/Tokens.h>
 
-    extern int yylex(void);
+    extern int axlex();
 
     using namespace openvdb::ax::ast;
 
@@ -107,12 +107,13 @@
     }
 %}
 
-%error-verbose
+%define parse.error verbose
+%define api.prefix {ax}
 %locations
 
 %union
 {
-    const char* value_string;
+    const char* string;
     uint64_t index;
 
     openvdb::ax::ast::Tree* tree;
@@ -132,6 +133,7 @@
 
 %start statements
 
+%token RESERVED
 %token TRUE FALSE
 %token SEMICOLON AT DOLLAR
 %token IF ELSE
@@ -147,13 +149,13 @@
 %token VEC3I VEC3F VEC3D
 %token DOT_X DOT_Y DOT_Z
 
-%token <value_string> L_SHORT
-%token <value_string> L_INT
-%token <value_string> L_LONG
-%token <value_string> L_FLOAT
-%token <value_string> L_DOUBLE
-%token <value_string> L_STRING
-%token <value_string> IDENTIFIER
+%token <string> L_SHORT
+%token <string> L_INT
+%token <string> L_LONG
+%token <string> L_FLOAT
+%token <string> L_DOUBLE
+%token <string> L_STRING
+%token <string> IDENTIFIER
 
 %type <tree> statements
 %type <block> block
@@ -180,8 +182,8 @@
 
 %type <value> vector_literal
 %type <value> literal
-%type <value_string> scalar_type
-%type <value_string> vector_type
+%type <string> scalar_type
+%type <string> vector_type
 
 %right EQUALS PLUSEQUALS MINUSEQUALS MULTIPLYEQUALS DIVIDEEQUALS PLUSPLUS MINUSMINUS
 %left AND OR

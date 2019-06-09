@@ -1,8 +1,9 @@
-/* A Bison parser, made by GNU Bison 3.0.5.  */
+/* A Bison parser, made by GNU Bison 3.4.1.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018 Free Software Foundation, Inc.
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2019 Free Software Foundation,
+   Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,102 +31,113 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_YY_GRAMMAR_AXPARSER_H_INCLUDED
-# define YY_YY_GRAMMAR_AXPARSER_H_INCLUDED
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
+
+#ifndef YY_AX_GRAMMAR_AXPARSER_H_INCLUDED
+# define YY_AX_GRAMMAR_AXPARSER_H_INCLUDED
 /* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
+#ifndef AXDEBUG
+# if defined YYDEBUG
 #if YYDEBUG
-extern int yydebug;
+#   define AXDEBUG 1
+#  else
+#   define AXDEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define AXDEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined AXDEBUG */
+#if AXDEBUG
+extern int axdebug;
 #endif
 
 /* Token type.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
+#ifndef AXTOKENTYPE
+# define AXTOKENTYPE
+  enum axtokentype
   {
-    TRUE = 258,
-    FALSE = 259,
-    SEMICOLON = 260,
-    AT = 261,
-    DOLLAR = 262,
-    IF = 263,
-    ELSE = 264,
-    RETURN = 265,
-    EQUALS = 266,
-    PLUSEQUALS = 267,
-    MINUSEQUALS = 268,
-    MULTIPLYEQUALS = 269,
-    DIVIDEEQUALS = 270,
-    PLUSPLUS = 271,
-    MINUSMINUS = 272,
-    LPARENS = 273,
-    RPARENS = 274,
-    LCURLY = 275,
-    RCURLY = 276,
-    PLUS = 277,
-    MINUS = 278,
-    MULTIPLY = 279,
-    DIVIDE = 280,
-    MODULO = 281,
-    BITAND = 282,
-    BITOR = 283,
-    BITXOR = 284,
-    BITNOT = 285,
-    EQUALSEQUALS = 286,
-    NOTEQUALS = 287,
-    MORETHAN = 288,
-    LESSTHAN = 289,
-    MORETHANOREQUAL = 290,
-    LESSTHANOREQUAL = 291,
-    AND = 292,
-    OR = 293,
-    NOT = 294,
-    STRING = 295,
-    DOUBLE = 296,
-    FLOAT = 297,
-    LONG = 298,
-    INT = 299,
-    SHORT = 300,
-    BOOL = 301,
-    VOID = 302,
-    F_AT = 303,
-    I_AT = 304,
-    V_AT = 305,
-    S_AT = 306,
-    F_DOLLAR = 307,
-    I_DOLLAR = 308,
-    V_DOLLAR = 309,
-    S_DOLLAR = 310,
-    COMMA = 311,
-    VEC3I = 312,
-    VEC3F = 313,
-    VEC3D = 314,
-    DOT_X = 315,
-    DOT_Y = 316,
-    DOT_Z = 317,
-    L_SHORT = 318,
-    L_INT = 319,
-    L_LONG = 320,
-    L_FLOAT = 321,
-    L_DOUBLE = 322,
-    L_STRING = 323,
-    IDENTIFIER = 324,
-    LPAREN = 325,
-    RPAREN = 326,
-    LOWER_THAN_ELSE = 327
+    RESERVED = 258,
+    TRUE = 259,
+    FALSE = 260,
+    SEMICOLON = 261,
+    AT = 262,
+    DOLLAR = 263,
+    IF = 264,
+    ELSE = 265,
+    RETURN = 266,
+    EQUALS = 267,
+    PLUSEQUALS = 268,
+    MINUSEQUALS = 269,
+    MULTIPLYEQUALS = 270,
+    DIVIDEEQUALS = 271,
+    PLUSPLUS = 272,
+    MINUSMINUS = 273,
+    LPARENS = 274,
+    RPARENS = 275,
+    LCURLY = 276,
+    RCURLY = 277,
+    PLUS = 278,
+    MINUS = 279,
+    MULTIPLY = 280,
+    DIVIDE = 281,
+    MODULO = 282,
+    BITAND = 283,
+    BITOR = 284,
+    BITXOR = 285,
+    BITNOT = 286,
+    EQUALSEQUALS = 287,
+    NOTEQUALS = 288,
+    MORETHAN = 289,
+    LESSTHAN = 290,
+    MORETHANOREQUAL = 291,
+    LESSTHANOREQUAL = 292,
+    AND = 293,
+    OR = 294,
+    NOT = 295,
+    STRING = 296,
+    DOUBLE = 297,
+    FLOAT = 298,
+    LONG = 299,
+    INT = 300,
+    SHORT = 301,
+    BOOL = 302,
+    VOID = 303,
+    F_AT = 304,
+    I_AT = 305,
+    V_AT = 306,
+    S_AT = 307,
+    F_DOLLAR = 308,
+    I_DOLLAR = 309,
+    V_DOLLAR = 310,
+    S_DOLLAR = 311,
+    COMMA = 312,
+    VEC3I = 313,
+    VEC3F = 314,
+    VEC3D = 315,
+    DOT_X = 316,
+    DOT_Y = 317,
+    DOT_Z = 318,
+    L_SHORT = 319,
+    L_INT = 320,
+    L_LONG = 321,
+    L_FLOAT = 322,
+    L_DOUBLE = 323,
+    L_STRING = 324,
+    IDENTIFIER = 325,
+    LPAREN = 326,
+    RPAREN = 327,
+    LOWER_THAN_ELSE = 328
   };
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-
-union YYSTYPE
+#if ! defined AXSTYPE && ! defined AXSTYPE_IS_DECLARED
+union AXSTYPE
 {
-#line 114 "grammar/axparser.y" /* yacc.c:1910  */
+#line 114 "grammar/axparser.y"
 
-    const char* value_string;
+    const char* string;
     uint64_t index;
 
     openvdb::ax::ast::Tree* tree;
@@ -142,31 +154,31 @@ union YYSTYPE
     openvdb::ax::ast::DeclareLocal* declare_local;
     openvdb::ax::ast::Local* local;
 
-#line 146 "grammar/axparser.h" /* yacc.c:1910  */
-};
+#line 158 "grammar/axparser.h"
 
-typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+};
+typedef union AXSTYPE AXSTYPE;
+# define AXSTYPE_IS_TRIVIAL 1
+# define AXSTYPE_IS_DECLARED 1
 #endif
 
 /* Location type.  */
-#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
-typedef struct YYLTYPE YYLTYPE;
-struct YYLTYPE
+#if ! defined AXLTYPE && ! defined AXLTYPE_IS_DECLARED
+typedef struct AXLTYPE AXLTYPE;
+struct AXLTYPE
 {
   int first_line;
   int first_column;
   int last_line;
   int last_column;
 };
-# define YYLTYPE_IS_DECLARED 1
-# define YYLTYPE_IS_TRIVIAL 1
+# define AXLTYPE_IS_DECLARED 1
+# define AXLTYPE_IS_TRIVIAL 1
 #endif
 
 
-extern YYSTYPE yylval;
-extern YYLTYPE yylloc;
-int yyparse (openvdb::ax::ast::Tree** tree);
+extern AXSTYPE axlval;
+extern AXLTYPE axlloc;
+int axparse (openvdb::ax::ast::Tree** tree);
 
-#endif /* !YY_YY_GRAMMAR_AXPARSER_H_INCLUDED  */
+#endif /* !YY_AX_GRAMMAR_AXPARSER_H_INCLUDED  */

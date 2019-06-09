@@ -31,6 +31,7 @@
 #include "AST.h"
 
 #include <openvdb_ax/Exceptions.h>
+#include <openvdb_ax/grammar/axparser.h>
 
 #include <tbb/mutex.h>
 
@@ -493,19 +494,20 @@ tbb::mutex sInitMutex;
 std::string sLastParsingError;
 }
 
-using yyscan_t = void*;
 using YY_BUFFER_STATE = struct yy_buffer_state*;
-
-extern int yyparse(openvdb::ax::ast::Tree**);
-extern YY_BUFFER_STATE yy_scan_string(const char * str);
-extern void yy_delete_buffer(YY_BUFFER_STATE buffer);
+extern int axparse(openvdb::ax::ast::Tree**);
+extern YY_BUFFER_STATE ax_scan_string(const char * str);
+extern void ax_delete_buffer(YY_BUFFER_STATE buffer);
 
 /// On a parsing error we store the error string in a global
 /// variable so that we can access it later. Note that this does
 /// not get called for invalid character lexical errors - we
 /// immediate throw in the lexer in this case
-extern void yyerror (openvdb::ax::ast::Tree**, char const *s) {
-    sLastParsingError = std::string(s);
+extern void axerror (openvdb::ax::ast::Tree**, char const *s) {
+    std::string ln = std::to_string(axlloc.first_line);
+    sLastParsingError = std::string(s) + ln;
+    std::cerr << axlloc.last_line << std::endl;
+    //fprintf(stderr, "%s line:%d", s,axlloc.first_line);
 }
 
 openvdb::ax::ast::Tree::Ptr
@@ -513,14 +515,14 @@ openvdb::ax::ast::parse(const char* code)
 {
     tbb::mutex::scoped_lock lock(sInitMutex);
 
-    YY_BUFFER_STATE buffer = yy_scan_string(code);
+    YY_BUFFER_STATE buffer = ax_scan_string(code);
 
     openvdb::ax::ast::Tree* tree(nullptr);
-    const int result = yyparse(&tree);
+    const int result = axparse(&tree);
 
     openvdb::ax::ast::Tree::Ptr ptr(tree);
 
-    yy_delete_buffer(buffer);
+    ax_delete_buffer(buffer);
 
     if (result) {
         OPENVDB_THROW(openvdb::LLVMSyntaxError, sLastParsingError)
