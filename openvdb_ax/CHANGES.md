@@ -1,14 +1,118 @@
 OpenVDB AX Version History
 ==========================
 
-Version 0.0.5 - WIP
+Version 0.1.0 - WIP
+
+    New Features:
+    - Attribute, external and local support for 3x3 and 4x4 matrices and 2 and 4
+      component vectors using the following tokens: mat3f, mat3d, mat4f, mat4d,
+      vec2i, vec2f, vec2d, vec4i, vec4f, vec4d. Attributes and externals use the
+      same tokens with @ and $ respectively
+    - New array style indexing support for vectors and matrices. Both can be
+      indexed as an array using single [0] operations. Matrices can be indexed
+      by row, column using [0,0]
+    - New functions added: identity3, identity4, postscale, prescale,
+      pretransform, simplexnoise, transform, transpose
+    - Significantly improved the performance of duplicate attribute accesses for
+      points and volumes
+    - New compound assignment support for %=, &=, |= and ^=
+    - Attributes can now be cremented
+    - Added pyopenvdbax module which exposes basic python bindings for AX.
+      Provides compilation of executables and execution on VDB grids through
+      Python.
+    - New arguments and modes to the vdb_ax binary. Analysis provides detailed
+      information for a given ax snippet. More tools to search and list available
+      functions
+    - Significantly re-worked volume execution. Each volume now receives the
+      same singularly generated AX function. This more closely matches Houdini
+      VEX behaviour
+    - New reprint() methods for printing an AST as AX code
+    - New scanner methods and API for returning detailed information from an AST
 
     Bug fixes:
     - Fixed a crash which could occur when destructing AX executables. This was
-      due to the destruction order of LLVM objects which have since been reversed.
+      due to the destruction order of LLVM objects which have since been
+      reversed.
 
     Improvements:
+    - Function signatures are now printed with their AX types rather than their
+      LLVM types (i.e. int(short) vs i32(i16))
+    - Significantly improved the descriptive printing of any parsed AST
+    - Added lexer location tracking for error line and column numbering
+    - Significantly improved backend string support
+    - Introduced new methods for dependency tracking attributes for efficiently
+      determining the copy requirements of volume
+    - Removed duplicate rescaling / offset of existing "noise" function.
     - Moved testing CMake config into its own CMakeLists.txt.
+    - Significantly improved the descriptive printing of any parsed AST
+
+    Houdini:
+    - Fixed an issue where the VDB name was taken over the Houdini Primitive
+      name for VDBs passed into the OpenVDB AX SOP [OVP-711]
+    - Renamed the OpenVDB AX node type from DN_OpenVDBAX to openvdbax
+
+    AST:
+    - The Visitor and Modifier have been removed in favour of a new Visitor CRTP
+    - Introduced AST tokens for type inference
+    - Introduced implicit parent tracking to AST nodes
+    - Introduced full and short AST node names
+    - Converted all child AST nodes to unique pointers from shared pointers
+    - Introduced child indexing and in-place node replacement
+    - New token to represent types to avoid passing around strings
+    - Removed VectorPack/Unpack in favour of ArrayPack/Unpack
+    - Refactored the crement node to only own a single variable
+
+    Grammar:
+    - Significant clean-up and improvements to lexer and parser
+    - Removed legacy component assignments in favour of new workflows for point
+      and volume vector attributes in their respective code generators
+    - mat3f, mat3d, mat4f, mat4d, vec2i, vec2f, vec2d, vec4i, vec4f, vec4d, []
+      and [,] support
+    - Improved the operator precedence definitions in the parser
+    - New variable_reference rule for assignable objects
+    - Types passed around using new type tokens
+    - Bison and Flex methods are now all prefixed (with ax) to support multiple
+      lexers within the same program
+    - Removed unused tokens in the lexer
+    - Improved lexer whitespace support
+    - Added reserved keywords in the lexer
+
+    Code Generation:
+    - Strings are now represented by a custom LLVM struct which holds a
+      re-allocatable char* and an int64_t for the size
+    - Getters and setters for new attribute type support
+    - All literals (except for arrays) are passed around as constants and are no
+      longer allocated
+    - String literals are now created as global IR values so that the same
+      literals can be shared
+    - Removed VectorPack/Unpack IR generation in favour of ArrayPack/Unpack
+    - Updated all visitors to use new AST methods
+    - Point/volume compute generator no longer overrides crement and assign.
+      Instead, attributes are retrieved once at the beginning of the tree and
+      set at the end
+    - Point/volume compute generator create and return their own attribute
+      registry to infer read/write accesses
+    - The volume generator now accepts an additional accessor and index
+      representing the volume being accessed
+    - The function framework now supports nullptr returns for IR functions which
+      return void
+    - Changed the core function storage from void* to void(*)() to adhere to
+      point-to-function standard
+
+    Compiler:
+    - Completely removed volume blocks. A single function is generated which is
+      run for every volume
+    - Volume executable updated to support new volume workflow
+
+    CMake / Build / Testing:
+    - Updated to OpenVDB 6.1 CMake modules
+    - Added CMake support for grammar generation
+    - Added CMake options for static/shared library generation
+    - Updated the CMake test framework to run the snippets directly from the
+      source repository without copying
+    - Updated jenkins builder to use the CMake modules and added H17.5
+    - Improved LLVM version support for versions 6/7/8
+    - Overhaul of frontend tests to compare full AST generation
 
 Version 0.0.4 - December 12, 2018
 

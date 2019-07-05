@@ -33,7 +33,6 @@
 
 #include <openvdb_ax/version.h>
 
-#include <iosfwd>
 #include <iostream>
 
 namespace openvdb {
@@ -43,12 +42,25 @@ namespace OPENVDB_VERSION_NAME {
 namespace ax {
 namespace ast {
 
-struct Tree;
+struct Node;
 
 /// @brief Writes a debug printout of a Tree object into a target stream
 /// @param tree Tree to print
 /// @param os   Stream to write into
-void print(const ast::Tree& tree, std::ostream& os = std::cout);
+void print(const ast::Node& node,
+    const bool numberStatements = true,
+    std::ostream& os = std::cout,
+    const char* indent = "    ");
+
+/// @brief Using the provided AST, print corresponding AX code which
+///   may have been used to create it.
+/// @note  The result is not guaranteed to be exactly equal to the
+///   code that was original parsed. A few potential key differences worth
+///   mentioning include whitespace matching, component indexing and inferred
+///   attribute types.
+void reprint(const ast::Node& node,
+    std::ostream& os = std::cout,
+    const char* indent = "    ");
 
 } // namespace ast
 } // namespace ax

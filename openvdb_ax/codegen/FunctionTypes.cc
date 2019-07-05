@@ -54,69 +54,95 @@ namespace ax {
 namespace codegen {
 
 void
-argumentsFromStack(std::stack<llvm::Value*>& values,
+stackValuesForFunction(std::vector<llvm::Value*>& arguments,
+                   std::stack<llvm::Value*>& values,
                    const size_t count,
-                   std::vector<llvm::Value*>& arguments)
+                   llvm::IRBuilder<>& builder)
 {
+    // initialize arguments. scalars are always passed by value, arrays
+    // always by pointer, strings by a pointer to the first char
+    llvm::Type* strType =
+        LLVMType<std::string>::get(builder.getContext());
+
     arguments.resize(count);
     for (auto r = arguments.rbegin(); r != arguments.rend(); ++r) {
-        *r = values.top();
-        values.pop();
+        llvm::Value* arg = values.top(); values.pop();
+        llvm::Type* type = arg->getType();
+        if (type->isPointerTy()) {
+            type = type->getPointerElementType();
+            if (type->isIntegerTy() || type->isFloatingPointTy()) {
+                // pass by value
+                arg = builder.CreateLoad(arg);
+            }
+            else if (type->isArrayTy()) {/*pass by pointer*/}
+            else if (type == strType) {
+                // get the string pointer
+                arg = builder.CreateStructGEP(strType, arg, 0); // char**
+                arg = builder.CreateLoad(arg); // char*
+            }
+        }
+        else {
+            // arrays should never be loaded
+            assert(!type->isArrayTy());
+            if (type->isIntegerTy() || type->isFloatingPointTy()) {
+                /*pass by value*/
+            }
+            else if (type == LLVMType<std::string>::get(builder.getContext())) {
+                llvm::Constant* zero =
+                    llvm::cast<llvm::Constant>(LLVMType<int32_t>::get(builder.getContext(), 0));
+                arg = llvm::cast<llvm::Constant>(arg)->getAggregateElement(zero); // char*
+            }
+        }
+        *r = arg;
     }
 }
 
-bool
-parseDefaultArgumentState(std::vector<llvm::Value*>& arguments,
-                          llvm::IRBuilder<>& builder,
-                          const bool loadScalarArguments)
+inline void
+printType(const llvm::Type* type, llvm::raw_os_ostream& stream, const bool axTypes)
 {
-    bool changed = false;
-    for (auto& arg : arguments) {
-        llvm::Type* type = arg->getType();
-        if (!type->isPointerTy()) continue;
-        type = type->getContainedType(0);
-        if (loadScalarArguments && isScalarType(type) &&
-            !isCharType(type, builder.getContext())) {
-            arg = builder.CreateLoad(arg);
-            changed |= true;
-        }
-    }
-
-    return changed;
+    const ast::tokens::CoreType token =
+        axTypes ? tokenFromLLVMType(type) : ast::tokens::UNKNOWN;
+    if (token == ast::tokens::UNKNOWN) type->print(stream);
+    else stream << ast::tokens::typeStringFromToken(token);
 }
 
 inline void
 printTypes(llvm::raw_os_ostream& stream,
            const std::vector<llvm::Type*>& types,
-           const std::string sep = "; ")
+           const std::string sep = "; ",
+           const bool axTypes = false)
 {
     if (types.empty()) return;
     auto typeIter = types.cbegin();
     for (; typeIter != types.cend() - 1; ++typeIter) {
-        (*typeIter)->print(stream);
+        printType(*typeIter, stream, axTypes);
         stream << sep;
     }
-    (*typeIter)->print(stream);
+    printType(*typeIter, stream, axTypes);
 }
 
 void
 printSignature(const llvm::Type* returnType,
                const std::vector<llvm::Type*>& signature,
                const std::string& functionName,
-               std::ostream& os)
+               std::ostream& os,
+               const bool axTypes = false)
 {
     llvm::raw_os_ostream stream(os);
 
-    if (returnType) returnType->print(stream);
-    stream << " " << functionName << "(";
-    printTypes(stream, signature);
-    stream << ")";
+    if (returnType) printType(returnType, stream, axTypes);
+    if (!functionName.empty()) {
+        stream << " " << functionName;
+    }
+    stream << '(';
+    printTypes(stream, signature, "; ", axTypes);
+    stream << ')';
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-FunctionSignatureBase::FunctionSignatureBase(void* const function,
+FunctionSignatureBase::FunctionSignatureBase(VoidFPtr function,
                       const std::string& symbol,
                       const size_t outArgs)
     : mFunction(function)
@@ -248,28 +274,11 @@ FunctionSignatureBase::toLLVMFunction(llvm::Module& M) const
 }
 
 void
-FunctionSignatureBase::print(llvm::LLVMContext& C, const std::string& name, std::ostream& os) const
+FunctionSignatureBase::print(llvm::LLVMContext& C, const std::string& name, std::ostream& os, const bool axTypes) const
 {
-    llvm::raw_os_ostream stream(os);
-
     std::vector<llvm::Type*> current;
     llvm::Type* returnT = this->toLLVMTypes(C, &current);
-
-    returnT->print(stream);
-
-    if (!name.empty()) stream << " ";
-    stream << name << "(";
-
-    if (!current.empty()) {
-        auto typeIter = current.cbegin();
-        for (; typeIter != current.cend() - 1; ++typeIter) {
-            (*typeIter)->print(stream);
-            stream << "; ";
-        }
-        (*typeIter)->print(stream);
-    }
-
-    stream << ")";
+    printSignature(returnT, current, name, os, axTypes);
 }
 
 bool
@@ -398,15 +407,14 @@ FunctionBase::match(const std::vector<llvm::Type*>& types,
 llvm::Value*
 FunctionBase::execute(const std::vector<llvm::Value*>& args,
             const std::unordered_map<std::string, llvm::Value*>& globals,
-            llvm::IRBuilder<>& builder,
-            llvm::Module& M,
+            llvm::IRBuilder<>& B,
             std::vector<llvm::Value*>* results,
             const bool addOutputArguments) const
 {
     std::vector<llvm::Type*> types;
     valuesToTypes(args, types);
 
-    llvm::LLVMContext& C = M.getContext();
+    llvm::LLVMContext& C = B.getContext();
 
     const FunctionBase::FunctionMatch functionMatch =
         match(types, C, addOutputArguments);
@@ -423,11 +431,11 @@ FunctionBase::execute(const std::vector<llvm::Value*>& args,
 
         for (size_t i = 0; i < input.size(); ++i) {
             if (isScalarType(input[i]->getType())) {
-                input[i] = arithmeticConversion(input[i], targetTypes[i], builder);
+                input[i] = arithmeticConversion(input[i], targetTypes[i], B);
             }
             else if (isArrayType(input[i]->getType()->getContainedType(0))) {
                 llvm::Type* arrayType = getBaseContainedType(targetTypes[i]);
-                input[i] = arrayCast(input[i], arrayType->getArrayElementType(), builder);
+                input[i] = arrayCast(input[i], arrayType->getArrayElementType(), B);
             }
         }
     }
@@ -437,18 +445,21 @@ FunctionBase::execute(const std::vector<llvm::Value*>& args,
         assert(targetFunction);
 
         if (addOutputArguments) {
-            targetFunction->appendOutputArguments(input, builder);
+            targetFunction->appendOutputArguments(input, B);
         }
 
         llvm::Value* result = nullptr;
         if (targetFunction->functionPointer()) {
-            result = builder.CreateCall(targetFunction->toLLVMFunction(M), input);
+            llvm::Module* M = B.GetInsertBlock()->getParent()->getParent();
+            result = B.CreateCall(targetFunction->toLLVMFunction(*M), input);
         }
         else {
-            result = this->generate(input, globals, builder, M);
+            result = this->generate(input, globals, B);
         }
 
-        if (!result) {
+        // only error if result is a nullptr if the return it not void
+        llvm::Type* returnType = targetFunction->toLLVMTypes(C);
+        if (!returnType->isVoidTy() && !result) {
             OPENVDB_THROW(LLVMFunctionError, "Function \"" + this->identifier() +
                 "\" has been invoked with no valid llvm Value return.");
         }
@@ -460,10 +471,10 @@ FunctionBase::execute(const std::vector<llvm::Value*>& args,
         }
 
         // @todo  To implicit cast wrong return types?
-        if (result->getType() != targetFunction->toLLVMTypes(C)) {
+        if (result && result->getType() != returnType) {
             std::string type, expected;
             llvmTypeToString(result->getType(), type);
-            llvmTypeToString(targetFunction->toLLVMTypes(C), expected);
+            llvmTypeToString(returnType, expected);
 
             OPENVDB_THROW(LLVMFunctionError, "Function \"" + this->identifier() +
                 "\" has been invoked with a mismatching return type. Expected: \"" +
@@ -484,7 +495,7 @@ FunctionBase::execute(const std::vector<llvm::Value*>& args,
     else {
         // match == FunctionSignatureBase::SignatureMatch::Size
         os << "No matching function for ";
-        printSignature(LLVMType<void>::get(C), types, this->identifier(), os);
+        printSignature(LLVMType<void>::get(C), types, this->identifier(), os, true);
         os << ".";
     }
 

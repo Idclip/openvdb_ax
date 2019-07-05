@@ -29,6 +29,8 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include <openvdb_ax/ast/AST.h>
+#include <openvdb_ax/ast/Scanners.h>
+#include <openvdb_ax/ast/PrintTree.h>
 #include <openvdb_ax/Exceptions.h>
 #include <openvdb_ax/test/util.h>
 
@@ -36,79 +38,72 @@
 
 #include <string>
 
+using namespace openvdb::ax::ast;
+using namespace openvdb::ax::ast::tokens;
+
 namespace {
-
-enum BehaviourFlags
-{
-    Pass = unittest_util::ExpectedBase::Pass,    // else Fails
-};
-
-#define EXPECTED_PASS(Count) \
-    unittest_util::ExpectedBase::Ptr(new unittest_util::ExpectedType<>(BehaviourFlags::Pass, Count))
 
 static const unittest_util::CodeTests tests =
 {
-    { "var;", EXPECTED_PASS(2) },
-};
-
-struct LocalValueVisitor : public openvdb::ax::ast::Visitor
-{
-    ~LocalValueVisitor() override = default;
-    inline virtual void
-    visit(const openvdb::ax::ast::LocalValue& node) override final {
-        ++mCount;
-        mLocalValueNode = &node;
-    }
-    inline virtual void
-    visit(const openvdb::ax::ast::Local& node) override final {
-        ++mCount;
-        mLocalNode = &node;
-    }
-    size_t mCount = 0;
-    const openvdb::ax::ast::LocalValue* mLocalValueNode = nullptr;
-    const openvdb::ax::ast::Local* mLocalNode = nullptr;
+    { "a_;",   Node::Ptr(new Local("a_")) },
+    { "_a;",   Node::Ptr(new Local("_a")) },
+    { "_;",    Node::Ptr(new Local("_")) },
+    { "aa;",   Node::Ptr(new Local("aa")) },
+    { "A;",    Node::Ptr(new Local("A")) },
+    { "_A;",   Node::Ptr(new Local("_A")) },
+    { "a1;",   Node::Ptr(new Local("a1")) },
+    { "_1;",   Node::Ptr(new Local("_1")) },
+    { "abc;",  Node::Ptr(new Local("abc")) },
+    { "D1f;",  Node::Ptr(new Local("D1f")) },
+    { "var;",  Node::Ptr(new Local("var")) }
 };
 
 }
 
-class TestLocalValueNode : public CppUnit::TestCase
+class TestLocalNode : public CppUnit::TestCase
 {
- 	public:
+public:
 
- 	CPPUNIT_TEST_SUITE(TestLocalValueNode);
- 	CPPUNIT_TEST(testSyntax);
- 	CPPUNIT_TEST(testASTNode);
- 	CPPUNIT_TEST_SUITE_END();
+    CPPUNIT_TEST_SUITE(TestLocalNode);
+    CPPUNIT_TEST(testSyntax);
+    CPPUNIT_TEST(testASTNode);
+    CPPUNIT_TEST_SUITE_END();
 
- 	void testSyntax() { TEST_SYNTAX(tests); }
- 	void testASTNode();
+    void testSyntax() { TEST_SYNTAX_PASSES(tests); }
+    void testASTNode();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(TestLocalValueNode);
+CPPUNIT_TEST_SUITE_REGISTRATION(TestLocalNode);
 
-void TestLocalValueNode::testASTNode()
+void TestLocalNode::testASTNode()
 {
-	using namespace openvdb::ax::ast;
-
     for (const auto& test : tests) {
-        const unittest_util::ExpectedBase::Ptr behaviour = test.second;
-        if (behaviour->fails()) continue;
-
         const std::string& code = test.first;
-        const openvdb::ax::ast::Tree::Ptr tree = parse(code.c_str());
+        const Node* expected = test.second.get();
+        const Tree::Ptr tree = parse(code.c_str());
         CPPUNIT_ASSERT_MESSAGE(ERROR_MSG("No AST returned", code), static_cast<bool>(tree));
 
-        LocalValueVisitor visitor;
-        tree->accept(visitor);
+        // get the first statement
+        const Node* result = tree->child(0)->child(0);
+        CPPUNIT_ASSERT(result);
+        CPPUNIT_ASSERT_MESSAGE(ERROR_MSG("Invalid AST node", code),
+            Node::LocalNode == result->nodetype());
 
-        CPPUNIT_ASSERT_EQUAL_MESSAGE(ERROR_MSG("Unexpected AST node count", code),
-            behaviour->count(), visitor.mCount);
-        CPPUNIT_ASSERT_MESSAGE(ERROR_MSG("Invalid AST LocalValue node", code),
-            static_cast<bool>(visitor.mLocalValueNode));
-        CPPUNIT_ASSERT_MESSAGE(ERROR_MSG("Invalid AST Local node", code),
-            static_cast<bool>(visitor.mLocalNode));
+        std::vector<const Node*> resultList, expectedList;
+        linearize(*result, resultList);
+        linearize(*expected, expectedList);
+
+        if (!unittest_util::compareLinearTrees(expectedList, resultList)) {
+            std::ostringstream os;
+            os << "\nExpected:\n";
+            openvdb::ax::ast::print(*expected, true, os);
+            os << "Result:\n";
+            openvdb::ax::ast::print(*result, true, os);
+            CPPUNIT_FAIL(ERROR_MSG("Mismatching Trees for Local code", code) + os.str());
+        }
     }
 }
+
 
 // Copyright (c) 2015-2019 DNEG
 // All rights reserved. This software is distributed under the

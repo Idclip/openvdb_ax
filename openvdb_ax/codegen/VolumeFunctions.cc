@@ -39,17 +39,12 @@
 ///
 ///
 
-#ifndef OPENVDB_AX_CODEGEN_VOLUME_FUNCTIONS_HAS_BEEN_INCLUDED
-#define OPENVDB_AX_CODEGEN_VOLUME_FUNCTIONS_HAS_BEEN_INCLUDED
-
 #include "Functions.h"
 #include "FunctionTypes.h"
 #include "Types.h"
 #include "Utils.h"
 
-#include <openvdb_ax/ast/Tokens.h>
 #include <openvdb_ax/compiler/CompilerOptions.h>
-#include <openvdb_ax/compiler/CustomData.h>
 #include <openvdb_ax/Exceptions.h>
 
 #include <openvdb_ax/version.h>
@@ -63,6 +58,14 @@ namespace OPENVDB_VERSION_NAME {
 namespace ax {
 namespace codegen {
 
+// Macro for defining the function identifier and context. All functions must
+// define these values
+
+#define DEFINE_IDENTIFIER_CONTEXT_DOC(Identifier, CodeGenContext, Documentation) \
+    inline FunctionBase::Context context() const override final { return CodeGenContext; } \
+    inline const std::string identifier() const override final { return std::string(Identifier); } \
+    inline void getDocumentation(std::string& doc) const override final { doc = Documentation; }
+
 struct GetVoxelPWS : public FunctionBase
 {
     DEFINE_IDENTIFIER_CONTEXT_DOC("getvoxelpws", FunctionBase::Volume,
@@ -75,10 +78,9 @@ struct GetVoxelPWS : public FunctionBase
     }) {}
 
     llvm::Value*
-    generate(const std::vector<llvm::Value*>& args,
+    generate(const std::vector<llvm::Value*>&,
          const std::unordered_map<std::string, llvm::Value*>& globals,
-         llvm::IRBuilder<>& builder,
-         llvm::Module& M) const override final {
+         llvm::IRBuilder<>&) const override final {
         return globals.at("coord_ws");
     }
 };
@@ -95,10 +97,9 @@ struct GetCoordX : public FunctionBase
     }) {}
 
     llvm::Value*
-    generate(const std::vector<llvm::Value*>& args,
+    generate(const std::vector<llvm::Value*>&,
          const std::unordered_map<std::string, llvm::Value*>& globals,
-         llvm::IRBuilder<>& builder,
-         llvm::Module& M) const override final {
+         llvm::IRBuilder<>& builder) const override final {
         return builder.CreateLoad(builder.CreateConstGEP2_64(globals.at("coord_is"), 0, 0));
     }
 };
@@ -115,10 +116,9 @@ struct GetCoordY : public FunctionBase
     }) {}
 
     llvm::Value*
-    generate(const std::vector<llvm::Value*>& args,
+    generate(const std::vector<llvm::Value*>&,
          const std::unordered_map<std::string, llvm::Value*>& globals,
-         llvm::IRBuilder<>& builder,
-         llvm::Module& M) const override final {
+         llvm::IRBuilder<>& builder) const override final {
         return builder.CreateLoad(builder.CreateConstGEP2_64(globals.at("coord_is"), 0, 1));
     }
 };
@@ -135,10 +135,9 @@ struct GetCoordZ : public FunctionBase
     }) {}
 
     llvm::Value*
-    generate(const std::vector<llvm::Value*>& args,
+    generate(const std::vector<llvm::Value*>&,
          const std::unordered_map<std::string, llvm::Value*>& globals,
-         llvm::IRBuilder<>& builder,
-         llvm::Module& M) const override final {
+         llvm::IRBuilder<>& builder) const override final {
         return builder.CreateLoad(builder.CreateConstGEP2_64(globals.at("coord_is"), 0, 2));
     }
 };
@@ -227,15 +226,38 @@ private:
 
         (*value) = accessorPtr->getValue(coordIS);
     }
-
 };
 
-}
-}
-}
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+
+void insertVDBVolumeFunctions(FunctionRegistry& registry,
+    const FunctionOptions* options)
+{
+    const bool create = options && !options->mLazyFunctions;
+    auto add = [&](const std::string& name,
+        const FunctionRegistry::ConstructorT creator,
+        const bool internal)
+    {
+        if (create) registry.insertAndCreate(name, creator, *options, internal);
+        else        registry.insert(name, creator, internal);
+    };
+
+    // volume functions
+
+    add("getvoxel", GetVoxel::create, true);
+    add("setvoxel", SetVoxel::create, true);
+    add("getcoordx", GetCoordX::create, false);
+    add("getcoordy", GetCoordY::create, false);
+    add("getcoordz", GetCoordZ::create, false);
+    add("getvoxelpws", GetVoxelPWS::create, false);
 }
 
-#endif // OPENVDB_AX_CODEGEN_VOLUME_FUNCTIONS_HAS_BEEN_INCLUDED
+}
+}
+}
+}
 
 // Copyright (c) 2015-2019 DNEG
 // All rights reserved. This software is distributed under the

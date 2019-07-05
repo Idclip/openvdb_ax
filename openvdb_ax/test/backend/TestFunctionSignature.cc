@@ -116,7 +116,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("SVFunction"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::SVFunction));
+        reinterpret_cast<void(*)()>(&TestFunctions::SVFunction));
 
     // test inline static void function
 
@@ -125,7 +125,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("SIVFunction"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::SIVFunction));
+        reinterpret_cast<void(*)()>(&TestFunctions::SIVFunction));
 
     // test scalar arguments
 
@@ -135,7 +135,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("IFunctionScalar"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::IFunctionScalar));
+        reinterpret_cast<void(*)()>(&TestFunctions::IFunctionScalar));
 
     // test scalar ptr arguments
 
@@ -145,7 +145,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("IFunctionScalarPtr"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::IFunctionScalarPtr));
+        reinterpret_cast<void(*)()>(&TestFunctions::IFunctionScalarPtr));
 
     // test array ptr arguments
 
@@ -155,7 +155,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("IFunctionArray"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::IFunctionArray));
+        reinterpret_cast<void(*)()>(&TestFunctions::IFunctionArray));
 
     // test argument mixture
 
@@ -165,7 +165,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("FFunctionMix"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::FFunctionMix));
+        reinterpret_cast<void(*)()>(&TestFunctions::FFunctionMix));
 
     // test argument mixture const
 
@@ -175,7 +175,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("DFunctionMixc"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::DFunctionMixc));
+        reinterpret_cast<void(*)()>(&TestFunctions::DFunctionMixc));
 
     // test selected template functions
 
@@ -184,7 +184,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("TemplateSelection0"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::TemplateSelection0<float>));
+        reinterpret_cast<void(*)()>(&TestFunctions::TemplateSelection0<float>));
 
     // test multiple indirection layers
 
@@ -194,7 +194,7 @@ TestFunctionSignature::testCreate()
     CPPUNIT_ASSERT(functionPtr);
     CPPUNIT_ASSERT_EQUAL(functionPtr->symbolName(), std::string("MultiPtrFunction"));
     CPPUNIT_ASSERT_EQUAL(functionPtr->functionPointer(),
-        reinterpret_cast<void*>(&TestFunctions::MultiPtrFunction));
+        reinterpret_cast<void(*)()>(&TestFunctions::MultiPtrFunction));
 
     // test non matching - The function signature generator will allow compilation
     // of void() templates with differing layers of indirection, but fail at runtime on
@@ -246,10 +246,10 @@ TestFunctionSignature::testPrint()
 
     CPPUNIT_ASSERT_NO_THROW(functionPtr
         = FunctionSignature<void()>::create(nullptr, "__void"));
-     functionPtr->print(state.context(), "", os);
+    functionPtr->print(state.context(), "", os, false);
     CPPUNIT_ASSERT_EQUAL(std::string("void()"), os.str());
     os.str("");
-    functionPtr->print(state.context(), functionPtr->symbolName(),  os);
+    functionPtr->print(state.context(), functionPtr->symbolName(),  os, false);
     CPPUNIT_ASSERT_EQUAL(std::string("void __void()"), os.str());
     os.str("");
 
@@ -258,8 +258,12 @@ TestFunctionSignature::testPrint()
     CPPUNIT_ASSERT_NO_THROW(functionPtr
         = FunctionSignature<float(bool,int16_t,int32_t,int64_t,float,double)>
             ::create(nullptr, "__void"));
-     std::string expected("float test(i1; i16; i32; i64; float; double)");
-    functionPtr->print(state.context(), "test", os);
+    std::string expected("float test(i1; i16; i32; i64; float; double)");
+    functionPtr->print(state.context(), "test", os, false);
+    CPPUNIT_ASSERT_EQUAL(expected, os.str());
+    os.str("");
+    expected = std::string("float test(bool; short; int; long; float; double)");
+    functionPtr->print(state.context(), "test", os, true);
     CPPUNIT_ASSERT_EQUAL(expected, os.str());
     os.str("");
 
@@ -269,7 +273,12 @@ TestFunctionSignature::testPrint()
         = FunctionSignature<void(bool*,int16_t*,int32_t*,int64_t*,float*,double*)>
             ::create(nullptr, "__void"));
     expected = std::string("void(i1*; i16*; i32*; i64*; float*; double*)");
-    functionPtr->print(state.context(), "", os);
+    functionPtr->print(state.context(), "", os, false);
+    CPPUNIT_ASSERT_EQUAL(expected, os.str());
+    os.str("");
+    // note that AX types ignore pointers
+    expected = std::string("void(bool; short; int; long; float; double)");
+    functionPtr->print(state.context(), "", os, true);
     CPPUNIT_ASSERT_EQUAL(expected, os.str());
     os.str("");
 
@@ -279,7 +288,12 @@ TestFunctionSignature::testPrint()
         = FunctionSignature<void(bool(*)[1],int16_t(*)[2],int32_t(*)[3],int64_t(*)[4],float(*)[5],double(*)[6])>
             ::create(nullptr, "__void"));
     expected = std::string("void([1 x i1]*; [2 x i16]*; [3 x i32]*; [4 x i64]*; [5 x float]*; [6 x double]*)");
-    functionPtr->print(state.context(), "", os);
+    functionPtr->print(state.context(), "", os, false);
+    CPPUNIT_ASSERT_EQUAL(expected, os.str());
+    os.str("");
+    // Some of these types are not supported AX types
+    expected = std::string("void([1 x i1]*; [2 x i16]*; vec3i; [4 x i64]*; [5 x float]*; [6 x double]*)");
+    functionPtr->print(state.context(), "", os, true);
     CPPUNIT_ASSERT_EQUAL(expected, os.str());
     os.str("");
 
@@ -289,7 +303,12 @@ TestFunctionSignature::testPrint()
         = FunctionSignature<double(const bool, int16_t* const, int32_t(*)[1], const int64_t, const float* const, const double(*)[2])>
             ::create(&TestFunctions::DFunctionMixc, "DFunctionMixc"));
     expected = std::string("double(i1; i16*; [1 x i32]*; i64; float*; [2 x double]*)");
-    functionPtr->print(state.context(), "", os);
+    functionPtr->print(state.context(), "", os, false);
+    CPPUNIT_ASSERT_EQUAL(expected, os.str());
+    os.str("");
+    // Some of these types are not supported AX types
+    expected = std::string("double(bool; short; [1 x i32]*; long; float; vec2d)");
+    functionPtr->print(state.context(), "", os, true);
     CPPUNIT_ASSERT_EQUAL(expected, os.str());
     os.str("");
 
@@ -298,7 +317,7 @@ TestFunctionSignature::testPrint()
     CPPUNIT_ASSERT_NO_THROW(functionPtr = FunctionSignature<double()>::
         create((double(*)())(TestFunctions::TemplateSelection0), "TemplateSelection0"));
     expected = std::string("double()");
-    functionPtr->print(state.context(), "", os);
+    functionPtr->print(state.context(), "", os, false);
     CPPUNIT_ASSERT_EQUAL(expected, os.str());
     os.str("");
 
@@ -309,7 +328,7 @@ TestFunctionSignature::testPrint()
             create(&TestFunctions::MultiPtrFunction, "MultiPtrFunction"));
     // void pointers are pointers to structs containing a void member
     expected = std::string("{ void }**({ void }*; { void }**; { void }***; float*; float**; float***)");
-    functionPtr->print(state.context(), "", os);
+    functionPtr->print(state.context(), "", os, false);
     CPPUNIT_ASSERT_EQUAL(expected, os.str());
     os.str("");;
 }

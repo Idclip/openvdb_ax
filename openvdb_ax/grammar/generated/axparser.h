@@ -30,20 +30,28 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_YY_GRAMMAR_AXPARSER_H_INCLUDED
-# define YY_YY_GRAMMAR_AXPARSER_H_INCLUDED
+#ifndef YY_AX_OPENVDB_AX_GRAMMAR_AXPARSER_H_INCLUDED
+# define YY_AX_OPENVDB_AX_GRAMMAR_AXPARSER_H_INCLUDED
 /* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
+#ifndef AXDEBUG
+# if defined YYDEBUG
 #if YYDEBUG
-extern int yydebug;
+#   define AXDEBUG 1
+#  else
+#   define AXDEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define AXDEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined AXDEBUG */
+#if AXDEBUG
+extern int axdebug;
 #endif
 
 /* Token type.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
+#ifndef AXTOKENTYPE
+# define AXTOKENTYPE
+  enum axtokentype
   {
     TRUE = 258,
     FALSE = 259,
@@ -53,84 +61,99 @@ extern int yydebug;
     IF = 263,
     ELSE = 264,
     RETURN = 265,
-    EQUALS = 266,
-    PLUSEQUALS = 267,
-    MINUSEQUALS = 268,
-    MULTIPLYEQUALS = 269,
-    DIVIDEEQUALS = 270,
-    PLUSPLUS = 271,
-    MINUSMINUS = 272,
-    LPARENS = 273,
-    RPARENS = 274,
-    LCURLY = 275,
-    RCURLY = 276,
-    PLUS = 277,
-    MINUS = 278,
-    MULTIPLY = 279,
-    DIVIDE = 280,
-    MODULO = 281,
-    BITAND = 282,
-    BITOR = 283,
-    BITXOR = 284,
-    BITNOT = 285,
-    EQUALSEQUALS = 286,
-    NOTEQUALS = 287,
-    MORETHAN = 288,
-    LESSTHAN = 289,
-    MORETHANOREQUAL = 290,
-    LESSTHANOREQUAL = 291,
-    AND = 292,
-    OR = 293,
-    NOT = 294,
-    STRING = 295,
-    DOUBLE = 296,
-    FLOAT = 297,
-    LONG = 298,
-    INT = 299,
-    SHORT = 300,
-    BOOL = 301,
-    VOID = 302,
-    F_AT = 303,
-    I_AT = 304,
-    V_AT = 305,
-    S_AT = 306,
-    F_DOLLAR = 307,
-    I_DOLLAR = 308,
-    V_DOLLAR = 309,
-    S_DOLLAR = 310,
+    LCURLY = 266,
+    RCURLY = 267,
+    LSQUARE = 268,
+    RSQUARE = 269,
+    STRING = 270,
+    DOUBLE = 271,
+    FLOAT = 272,
+    LONG = 273,
+    INT = 274,
+    SHORT = 275,
+    BOOL = 276,
+    VOID = 277,
+    VEC2I = 278,
+    VEC2F = 279,
+    VEC2D = 280,
+    VEC3I = 281,
+    VEC3F = 282,
+    VEC3D = 283,
+    VEC4I = 284,
+    VEC4F = 285,
+    VEC4D = 286,
+    F_AT = 287,
+    I_AT = 288,
+    V_AT = 289,
+    S_AT = 290,
+    MAT3F = 291,
+    MAT3D = 292,
+    MAT4F = 293,
+    MAT4D = 294,
+    M3F_AT = 295,
+    M4F_AT = 296,
+    F_DOLLAR = 297,
+    I_DOLLAR = 298,
+    V_DOLLAR = 299,
+    S_DOLLAR = 300,
+    DOT_X = 301,
+    DOT_Y = 302,
+    DOT_Z = 303,
+    L_SHORT = 304,
+    L_INT = 305,
+    L_LONG = 306,
+    L_FLOAT = 307,
+    L_DOUBLE = 308,
+    L_STRING = 309,
+    IDENTIFIER = 310,
     COMMA = 311,
-    VEC3I = 312,
-    VEC3F = 313,
-    VEC3D = 314,
-    DOT_X = 315,
-    DOT_Y = 316,
-    DOT_Z = 317,
-    L_SHORT = 318,
-    L_INT = 319,
-    L_LONG = 320,
-    L_FLOAT = 321,
-    L_DOUBLE = 322,
-    L_STRING = 323,
-    IDENTIFIER = 324,
-    LPAREN = 325,
-    RPAREN = 326,
-    LOWER_THAN_ELSE = 327
+    EQUALS = 312,
+    PLUSEQUALS = 313,
+    MINUSEQUALS = 314,
+    MULTIPLYEQUALS = 315,
+    DIVIDEEQUALS = 316,
+    MODULOEQUALS = 317,
+    BITANDEQUALS = 318,
+    BITXOREQUALS = 319,
+    BITOREQUALS = 320,
+    OR = 321,
+    AND = 322,
+    BITOR = 323,
+    BITXOR = 324,
+    BITAND = 325,
+    EQUALSEQUALS = 326,
+    NOTEQUALS = 327,
+    MORETHAN = 328,
+    LESSTHAN = 329,
+    MORETHANOREQUAL = 330,
+    LESSTHANOREQUAL = 331,
+    PLUS = 332,
+    MINUS = 333,
+    MULTIPLY = 334,
+    DIVIDE = 335,
+    MODULO = 336,
+    NOT = 337,
+    BITNOT = 338,
+    PLUSPLUS = 339,
+    MINUSMINUS = 340,
+    LPARENS = 341,
+    RPARENS = 342,
+    LOWER_THAN_ELSE = 343
   };
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+#if ! defined AXSTYPE && ! defined AXSTYPE_IS_DECLARED
 
-union YYSTYPE
+union AXSTYPE
 {
-#line 114 "grammar/axparser.y" /* yacc.c:1910  */
 
-    const char* value_string;
+
+    const char* string;
     uint64_t index;
 
     openvdb::ax::ast::Tree* tree;
     openvdb::ax::ast::ValueBase* value;
-    openvdb::ax::ast::VectorUnpack* vector_unpack;
     openvdb::ax::ast::Block* block;
     openvdb::ax::ast::Statement* statement;
     openvdb::ax::ast::Expression* expression;
@@ -138,35 +161,34 @@ union YYSTYPE
     openvdb::ax::ast::Variable* variable;
     openvdb::ax::ast::ExternalVariable* external;
     openvdb::ax::ast::Attribute* attribute;
-    openvdb::ax::ast::AttributeValue* attributevalue;
     openvdb::ax::ast::DeclareLocal* declare_local;
     openvdb::ax::ast::Local* local;
 
-#line 146 "grammar/axparser.h" /* yacc.c:1910  */
+
 };
 
-typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+typedef union AXSTYPE AXSTYPE;
+# define AXSTYPE_IS_TRIVIAL 1
+# define AXSTYPE_IS_DECLARED 1
 #endif
 
 /* Location type.  */
-#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
-typedef struct YYLTYPE YYLTYPE;
-struct YYLTYPE
+#if ! defined AXLTYPE && ! defined AXLTYPE_IS_DECLARED
+typedef struct AXLTYPE AXLTYPE;
+struct AXLTYPE
 {
   int first_line;
   int first_column;
   int last_line;
   int last_column;
 };
-# define YYLTYPE_IS_DECLARED 1
-# define YYLTYPE_IS_TRIVIAL 1
+# define AXLTYPE_IS_DECLARED 1
+# define AXLTYPE_IS_TRIVIAL 1
 #endif
 
 
-extern YYSTYPE yylval;
-extern YYLTYPE yylloc;
-int yyparse (openvdb::ax::ast::Tree** tree);
+extern AXSTYPE axlval;
+extern AXLTYPE axlloc;
+int axparse (openvdb::ax::ast::Tree** tree);
 
-#endif /* !YY_YY_GRAMMAR_AXPARSER_H_INCLUDED  */
+#endif /* !YY_AX_OPENVDB_AX_GRAMMAR_AXPARSER_H_INCLUDED  */

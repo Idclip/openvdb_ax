@@ -44,6 +44,7 @@
 #include "SymbolTable.h"
 
 #include <openvdb_ax/ast/AST.h>
+#include <openvdb_ax/ast/Visitor.h>
 #include <openvdb_ax/compiler/CompilerOptions.h>
 
 #include <llvm/Analysis/TargetLibraryInfo.h>
@@ -92,64 +93,72 @@ struct ComputeKernel
 ///////////////////////////////////////////////////////////////////////////
 
 
-struct ComputeGenerator : public ast::Visitor
+struct ComputeGenerator : public ast::Visitor<ComputeGenerator>
 {
-
     ComputeGenerator(llvm::Module& module,
                      const FunctionOptions& options,
                      FunctionRegistry& functionRegistry,
                      std::vector<std::string>* const warnings = nullptr);
 
-    ~ComputeGenerator() override = default;
+    virtual ~ComputeGenerator() = default;
+
+    bool generate(const ast::Tree&);
 
     inline SymbolTable& globals() { return mSymbolTables.globals(); }
     inline const SymbolTable& globals() const { return mSymbolTables.globals(); }
 
-protected:
+    // Visitor pattern
 
-    // The following methods are typically overridden based on the volume
-    // access
+    using ast::Visitor<ComputeGenerator>::traverse;
+    using ast::Visitor<ComputeGenerator>::visit;
 
-    void init(const ast::Tree& node) override;
-    void visit(const ast::AssignExpression& node) override;
-    void visit(const ast::Crement& node) override;
-    void visit(const ast::FunctionCall& node) override;
-    void visit(const ast::Attribute& node) override;
-    void visit(const ast::AttributeValue& node) override;
-    ////
+    /// @brief  Code generation always runs post order
+    inline bool postOrderNodes() const { return true; }
+    /// @brief  Code generation never runs in reverse
+    inline bool reverse() const { return false; }
 
-    void visit(const ast::Tree& node) override;
-    void visit(const ast::Block& node) override;
-    void visit(const ast::ConditionalStatement& node) override;
-    void visit(const ast::Return& node) override;
-    void visit(const ast::UnaryOperator& node) override;
-    void visit(const ast::BinaryOperator& node) override;
-    void visit(const ast::Cast& node) override;
-    void visit(const ast::DeclareLocal& node) override;
-    void visit(const ast::Local& node) override;
-    void visit(const ast::ExternalVariable& node) override;
+    /// @brief  Custom traversal of conditional statements
+    bool traverse(const ast::ConditionalStatement* cond)
+    {
+        if (!cond) return true;
+        if (!this->traverse(cond->child(0))) return false;
+        if (!this->visit(cond)) return false;
+        if (!this->traverse(cond->child(1))) return false;
+        if (!this->traverse(cond->child(2))) return false;
+        return true;
+    }
 
-    /// @brief VectorUnpack pushes a single llvm::Value onto the value
-    /// stack which represents a pointer to an element of a vector
-    ///
-    void visit(const ast::VectorUnpack& node) override;
+    virtual bool visit(const ast::AssignExpression*);
+    virtual bool visit(const ast::Crement*);
+    virtual bool visit(const ast::FunctionCall*);
+    virtual bool visit(const ast::Attribute*);
+    virtual bool visit(const ast::Tree*);
+    virtual bool visit(const ast::Block*);
+    virtual bool visit(const ast::ConditionalStatement*);
+    virtual bool visit(const ast::Return*);
+    virtual bool visit(const ast::UnaryOperator*);
+    virtual bool visit(const ast::BinaryOperator*);
+    virtual bool visit(const ast::Cast*);
+    virtual bool visit(const ast::DeclareLocal*);
+    virtual bool visit(const ast::Local*);
+    virtual bool visit(const ast::ExternalVariable*);
+    virtual bool visit(const ast::ArrayUnpack*);
+    virtual bool visit(const ast::ArrayPack*);
+    virtual bool visit(const ast::Value<bool>*);
+    virtual bool visit(const ast::Value<int16_t>*);
+    virtual bool visit(const ast::Value<int32_t>*);
+    virtual bool visit(const ast::Value<int64_t>*);
+    virtual bool visit(const ast::Value<float>*);
+    virtual bool visit(const ast::Value<double>*);
+    virtual bool visit(const ast::Value<std::string>*);
 
-    /// @brief VectorPack pushes a single llvm::Value onto the value
-    /// stack which represents a pointer to a vector
-    ///
-    void visit(const ast::VectorPack& node) override;
-    void visit(const ast::ArrayPack& node) override;
+    template <typename ValueType>
+    typename std::enable_if<std::is_integral<ValueType>::value, bool>::type
+    visit(const ast::Value<ValueType>* node);
 
-    /// @brief Value<> scalar values and push a single llvm::Value
-    /// onto the value stack which represents a pointer to a scalar
-    ///
-    void visit(const ast::Value<bool>& node) override;
-    void visit(const ast::Value<int16_t>& node) override;
-    void visit(const ast::Value<int32_t>& node) override;
-    void visit(const ast::Value<int64_t>& node) override;
-    void visit(const ast::Value<float>& node) override;
-    void visit(const ast::Value<double>& node) override;
-    void visit(const ast::Value<std::string>& node) override;
+    template <typename ValueType>
+    typename std::enable_if<std::is_floating_point<ValueType>::value, bool>::type
+    visit(const ast::Value<ValueType>* node);
 
 protected:
 
@@ -188,16 +197,6 @@ protected:
     const FunctionOptions mOptions;
 
 private:
-
-    template <typename ValueType>
-    typename std::enable_if<std::is_integral<ValueType>::value>::type
-    visit(const ast::Value<ValueType>& node);
-
-    template <typename ValueType>
-    typename std::enable_if<std::is_floating_point<ValueType>::value>::type
-    visit(const ast::Value<ValueType>& node);
-
-    const std::unique_ptr<const llvm::TargetLibraryInfoImpl> mTargetLibInfoImpl;
     FunctionRegistry& mFunctionRegistry;
 };
 

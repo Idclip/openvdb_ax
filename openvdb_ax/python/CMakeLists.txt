@@ -24,44 +24,57 @@
 # IN NO EVENT SHALL THE COPYRIGHT HOLDERS' AND CONTRIBUTORS' AGGREGATE
 # LIABILITY FOR ALL CLAIMS REGARDLESS OF THEIR BASIS EXCEED US$250.00.
 #
+#[=======================================================================[
 
-# -*- cmake -*-
-# - Find LLVM
-#
-# Author : Nick Avramoussis
-#
-# LLVM_FOUND            set if LLVM is found.
-# LLVM_INCLUDE_DIR      LLVM's include directory
-# LLVM_LIBRARYDIR       LLVM's library directory
-# LLVM_LIBRARIES        all LLVM libraries
+  CMake Configuration for the OpenVDB AX Houdini Plugin.
 
-FIND_PACKAGE ( PackageHandleStandardArgs )
+#]=======================================================================]
 
-FIND_PROGRAM (LLVM_CONFIG bin/llvm-config
-  "$ENV{LLVM_ROOT}"
-  NO_DEFAULT_PATH
-  NO_SYSTEM_ENVIRONMENT_PATH)
+project(OpenVDBAXPython)
+cmake_minimum_required(VERSION 3.1)
 
-execute_process (COMMAND ${LLVM_CONFIG} --obj-root
-       OUTPUT_VARIABLE LLVM_LOCATION
-       OUTPUT_STRIP_TRAILING_WHITESPACE)
+#########################################################################
 
-FIND_PACKAGE_HANDLE_STANDARD_ARGS ( LLVM
-  REQUIRED_VARS LLVM_LOCATION
+message(STATUS "----------------------------------------------------")
+message(STATUS "----------- Configuring OpenVDBAXPython ------------")
+message(STATUS "----------------------------------------------------")
+
+##########################################################################
+
+if(NOT OPENVDB_BUILD_AX)
+  set(OPENVDBAX_LIB OpenVDB::openvdb_ax)
+else()
+  set(OPENVDBAX_LIB openvdb_ax)
+endif()
+
+set(PYOPENVDBAX_SRC_FILES
+  pyCompiler.cc
+  pyPointExecutable.cc
+  pyVolumeExecutable.cc
+  pyOpenVDBAX.cc
+)
+
+add_library(pyopenvdbax
+  SHARED
+  ${PYOPENVDBAX_SRC_FILES}
+)
+
+target_link_libraries(pyopenvdbax
+  OpenVDB::pyopenvdb
+  ${OPENVDBAX_LIB}
+)
+
+set_target_properties(pyopenvdbax PROPERTIES
+  PREFIX ""  # no 'lib' prefix
+)
+
+if(UNIX)
+  # must be .so (not .dylib)
+  set_target_properties(pyopenvdbax PROPERTIES
+    SUFFIX ".so"
   )
+endif()
 
-IF ( LLVM_FOUND )
-
-  execute_process (COMMAND ${LLVM_CONFIG} --includedir
-    OUTPUT_VARIABLE LLVM_INCLUDE_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-  execute_process (COMMAND ${LLVM_CONFIG} --libdir
-    OUTPUT_VARIABLE LLVM_LIBRARYDIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-  execute_process (COMMAND ${LLVM_CONFIG} --libs all
-    OUTPUT_VARIABLE LLVM_LIBRARIES
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-ENDIF ( LLVM_FOUND )
+install(TARGETS pyopenvdbax
+  DESTINATION lib/python
+)

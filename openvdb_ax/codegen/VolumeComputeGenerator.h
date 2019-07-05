@@ -42,6 +42,8 @@
 #include "ComputeGenerator.h"
 #include "FunctionTypes.h"
 
+#include <openvdb_ax/compiler/AttributeRegistry.h>
+
 namespace openvdb {
 OPENVDB_USE_VERSION_NAMESPACE
 namespace OPENVDB_VERSION_NAME {
@@ -72,7 +74,9 @@ struct VolumeKernel
              const int32_t (*)[3],
              const float (*)[3],
              void**,
-             void**);
+             void**,
+             int64_t,
+             void*);
 
     using FunctionT = std::function<Signature>;
     using FunctionTraitsT = codegen::FunctionTraits<FunctionT>;
@@ -101,28 +105,23 @@ struct VolumeComputeGenerator : public ComputeGenerator
     ///                         be stored.
     /// @param functionName     Name of the generated IR function
     VolumeComputeGenerator(llvm::Module& module,
-                           const FunctionOptions& options,
-                           FunctionRegistry& functionRegistry,
-                           std::vector<std::string>* const warnings = nullptr);
+        const FunctionOptions& options,
+        FunctionRegistry& functionRegistry,
+        std::vector<std::string>* const warnings = nullptr);
 
     ~VolumeComputeGenerator() override = default;
 
-    void setFunctionName(const std::string& name);
+    using ComputeGenerator::traverse;
+    using ComputeGenerator::visit;
 
-protected:
-
-    /// @brief initializes visitor.  Automatically called when visiting the tree's root node.
-    void init(const ast::Tree& node) override;
-    void visit(const ast::AssignExpression& node) override;
-    void visit(const ast::Crement& node) override;
-    void visit(const ast::FunctionCall& node) override;
-    void visit(const ast::Attribute& node) override;
-    void visit(const ast::AttributeValue& node) override;
+    AttributeRegistry::Ptr generate(const ast::Tree& node);
+    bool visit(const ast::Attribute*) override;
+    bool visit(const ast::FunctionCall*) override;
 
 private:
 
-    size_t mVolumeVisitCount;
-    std::string mFunctionName;
+    void getAccessorValue(const std::string&, llvm::Value*);
+    llvm::Value* accessorHandleFromToken(const std::string&);
 };
 
 }

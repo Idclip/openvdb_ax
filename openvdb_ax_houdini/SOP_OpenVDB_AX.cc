@@ -73,12 +73,6 @@
 
 #include "ax/HoudiniAXUtils.h"
 
-#if UT_MAJOR_VERSION_INT >= 16
-#define VDB_COMPILABLE_SOP 1
-#else
-#define VDB_COMPILABLE_SOP 0
-#endif
-
 namespace hvdb = openvdb_houdini;
 namespace hax =  openvdb_ax_houdini;
 namespace hutil = houdini_utils;
@@ -88,12 +82,11 @@ using namespace openvdb;
 
 ////////////////////////////////////////
 
-
 /// @brief OpPolicy for OpenVDB operator types from DNEG
 class DnegVDBOpPolicy: public hutil::OpPolicy
 {
 public:
-    std::string getName(const houdini_utils::OpFactory&, const std::string& english) override
+    std::string getValidName(const std::string& english)
     {
         UT_String s(english);
         // Remove non-alphanumeric characters from the name.
@@ -102,32 +95,37 @@ public:
         // Remove spaces and underscores.
         name.erase(std::remove(name.begin(), name.end(), ' '), name.end());
         name.erase(std::remove(name.begin(), name.end(), '_'), name.end());
-        name = "DN_" + name;
         return name;
     }
 
-    /// @brief OpenVDB operators of each flavor (SOP, POP, etc.) share
-    /// an icon named "SOP_OpenVDB", "POP_OpenVDB", etc.
+    std::string getLowercaseName(const std::string& english)
+    {
+        UT_String s(english);
+        // Lowercase
+        s.toLower();
+        return s.toStdString();
+    }
+
+    std::string getName(const houdini_utils::OpFactory&, const std::string& english) override
+    {
+        return "DN_Open" + this->getValidName(english);
+    }
+
+    std::string getLabelName(const houdini_utils::OpFactory& factory) override
+    {
+        return "Open" + factory.english();
+    }
+
+    std::string getFirstName(const houdini_utils::OpFactory& factory) override
+    {
+        return this->getLowercaseName(this->getValidName(this->getLabelName(factory)));
+    }
+
     std::string getIconName(const houdini_utils::OpFactory& factory) override
     {
         return factory.flavorString() + "_OpenVDB";
     }
 };
-
-/// @brief OpFactory for OpenVDB operator types from DNEG
-class DnegVDBOpFactory: public hutil::OpFactory
-{
-public:
-    DnegVDBOpFactory(const std::string& english, OP_Constructor, hutil::ParmList&,
-    OP_OperatorTable&, hutil::OpFactory::OpFlavor = SOP);
-};
-
-DnegVDBOpFactory::DnegVDBOpFactory(const std::string& english,
-    OP_Constructor ctor,
-    houdini_utils::ParmList& parms,
-    OP_OperatorTable& table,
-    hutil::OpFactory::OpFlavor flavor):
-    hutil::OpFactory(DnegVDBOpPolicy(), english, ctor, parms, table, flavor) {}
 
 
 ////////////////////////////////////////
@@ -180,7 +178,7 @@ void initializeFunctionRegistry(ax::Compiler& compiler, const bool allowVex)
 {
     ax::FunctionOptions functionOptions;
     ax::codegen::FunctionRegistry::UniquePtr functionRegistry =
-        ax::codegen::createStandardRegistry(functionOptions);
+        ax::codegen::createDefaultRegistry(functionOptions);
 
     if (allowVex) {
         hax::registerCustomHoudiniFunctions(*functionRegistry, functionOptions);
@@ -201,7 +199,6 @@ public:
 
     static OP_Node* factory(OP_Network*, const char* name, OP_Operator*);
 
-#if VDB_COMPILABLE_SOP
     class Cache : public SOP_VDBCacheOptions
     {
     public:
@@ -210,7 +207,7 @@ public:
 
         OP_ERROR cookVDBSop(OP_Context&) override;
         /// @brief  See SOP_OpenVDB_AX::evaluateExternalExpressions
-        void evaluateExternalExpressions(const float time,
+        void evaluateExternalExpressions(const double time,
                         const hax::ChannelExpressionSet& set,
                         const bool hvars);
         /// @brief  See SOP_OpenVDB_AX::evalInsertHScriptVariable
@@ -230,52 +227,6 @@ public:
         hax::ChannelExpressionSet mDollarExpressionSet;
         std::vector<std::string> mWarnings;
     };
-
-#else
-protected:
-    OP_ERROR cookVDBSop(OP_Context&) override;
-
-private:
-    /// @brief  Evaulate all externally requested channels and $ nodes and insert
-    ///         any available values into AX's CustomData.
-    ///
-    /// @param  time   the context time at which to evaluate Houdini parameter values
-    /// @param  set    the type name set of external channels to evaluate
-    /// @param  hvars  whether or not to attempt to evaluate members of the expression set
-    ///                as HScript variables first. Falls back to channel evaluation on failure
-    void evaluateExternalExpressions(const float time,
-                        const hax::ChannelExpressionSet& set,
-                        const bool hvars);
-
-    /// @brief  Given a name specified with an AX lookup, attempt to evaluate it as
-    ///         if it were an accessible HScript Variable. If successful, add
-    ///         into the custom data.
-    /// @note   accessedType is the type requested by the user. If this is not the
-    ///         actual type of the variable, we let the compiler set a zero val and
-    ///         promote a warning.
-    /// @note   Returns true if the variable was a valid HScript token and will be
-    ///         treated as such. Does not guarantee the value has been updated. This
-    ///         is dependant on the accessType.
-    ///
-    /// @param  name   The name of the HScript variable, also used as the name in AX
-    /// @param  accessedType  The user requested type of the variable
-    /// @param  data   The CustomData for AX
-    bool evalInsertHScriptVariable(const std::string& name,
-                        const std::string& accessedType,
-                        ax::CustomData& data);
-
-    unsigned mHash;
-
-    ParameterCache mParameterCache;
-    CompilerCache mCompilerCache;
-
-    // The current set of channel and $ expressions.
-
-    hax::ChannelExpressionSet mChExpressionSet;
-    hax::ChannelExpressionSet mDollarExpressionSet;
-    std::vector<std::string> mWarnings;
-
-#endif
 
 protected:
     bool updateParmsFlags() override;
@@ -340,24 +291,20 @@ newSopOperator(OP_OperatorTable* table)
         .setDefault(PRMoneDefaults)
         .setHelpText("Whether to prune VDBs after execution. Does not affect VDB Point Grids."));
 
-
     //////////
     // Register this operator.
 
-    DnegVDBOpFactory("OpenVDB AX",
+    hutil::OpFactory(DnegVDBOpPolicy(), "VDB AX",
         SOP_OpenVDB_AX::factory, parms, *table)
         .addInput("VDBs to manipulate")
-#if VDB_COMPILABLE_SOP
+        .addAliasVerbatim("DW_OpenVDBAX")
+        .addAliasVerbatim("DN_OpenVDBAX")
         .setVerb(SOP_NodeVerb::COOK_INPLACE, []() { return new SOP_OpenVDB_AX::Cache; })
-#endif
         .setDocumentation("\
-#internal: DN_OpenVDBAX\n\
 #icon: COMMON/openvdb\n\
 #tags: vdb\n\
 \n\
 \"\"\"Runs an AX snippet to modify point and volume values in VDBs\"\"\"\n\
-\n\
-Please contact the [OpenVDB AX team|mailto:openvdbax@dneg.com] with any bug reports, questions or suggestions.\n\
 \n\
 @overview\n\
 \n\
@@ -558,6 +505,10 @@ Function ||\n\
 `double rand(double)` |\n\
     Generate a random floating-point number in the range `[0,1)` from a double-precision seed value. Repeated calls to this function with the same seed yields the same result.\n\
 \n\
+`void prescale(matrix, vector)` |\n\
+    Pre scales the matrix in three directions simultaneously by the factors in the vector. This modifies the matrix in-place, rather than returning a new matrix.\n\
+\n\
+\n\
 :note:\n\
 For an up-to-date list of available functions, see AX documentation or call `vdb_ax --list-functions` from the command line.\n\
 \n\
@@ -574,7 +525,6 @@ SOP_OpenVDB_AX::factory(OP_Network* net,
     return new SOP_OpenVDB_AX(net, name, op);
 }
 
-#if VDB_COMPILABLE_SOP
 SOP_OpenVDB_AX::SOP_OpenVDB_AX(OP_Network* net,
         const char* name, OP_Operator* op)
     : hvdb::SOP_NodeVDB(net, name, op)
@@ -597,27 +547,6 @@ SOP_OpenVDB_AX::Cache::Cache()
     initializeFunctionRegistry(*mCompilerCache.mCompiler, /*allow vex*/true);
 }
 
-#else
-SOP_OpenVDB_AX::SOP_OpenVDB_AX(OP_Network* net,
-        const char* name, OP_Operator* op)
-    : hvdb::SOP_NodeVDB(net, name, op)
-    , mHash(0)
-    , mParameterCache()
-    , mCompilerCache()
-    , mChExpressionSet()
-    , mDollarExpressionSet()
-    , mWarnings()
-{
-    ax::initialize();
-
-    mCompilerCache.mCompiler = ax::Compiler::create();
-    mCompilerCache.mCustomData.reset(new ax::CustomData);
-
-    // initialize the function registry with VEX support as default
-    initializeFunctionRegistry(*mCompilerCache.mCompiler, /*allow vex*/true);
-}
-#endif
-
 bool
 SOP_OpenVDB_AX::updateParmsFlags()
 {
@@ -625,7 +554,6 @@ SOP_OpenVDB_AX::updateParmsFlags()
     const bool points = evalInt("targettype", 0, 0) == 0;
     changed |= enableParm("pointsgroup", points);
     changed |= enableParm("prune", !points);
-
 
     return changed;
 }
@@ -642,21 +570,12 @@ struct PruneOp {
 };
 
 OP_ERROR
-VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& context)
+SOP_OpenVDB_AX::Cache::cookVDBSop(OP_Context& context)
 {
     try {
-
-#if !VDB_COMPILABLE_SOP
-        hutil::ScopedInputLock lock(*this, context);
-        lock.markInputUnlocked(0);
-        duplicateSourceStealable(0, context);
-        if (gdp == nullptr) return error();
-        SOP_OpenVDB_AX* self = this;
-#else
         // may be null if cooking as a verb i.e. through python
         SOP_OpenVDB_AX* self =
             static_cast<SOP_OpenVDB_AX*>(this->cookparms()->getSrcNode());
-#endif
 
         hvdb::Interrupter boss("Executing OpenVDB AX");
 
@@ -691,7 +610,7 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& co
         else      this->evalString(snippet, "snippet", 0, time);
         if (snippet.length() == 0) return error();
 
-        const int targetInt = evalInt("targettype", 0, time);
+        const int targetInt = static_cast<int>(evalInt("targettype", 0, time));
 
         ParameterCache parmCache;
         parmCache.mTargetType = static_cast<hax::TargetType>(targetInt);
@@ -761,11 +680,7 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& co
             // so it's not called for every cook if nothing has changed
 
             if (!mDollarExpressionSet.empty() && parmCache.mHScriptSupport) {
-#if VDB_COMPILABLE_SOP
                 this->cookparms()->setupLocalVars();
-#else
-                this->setupLocalVars();
-#endif
             }
 
             evaluateExternalExpressions(time, mChExpressionSet, /*no $ support*/false);
@@ -809,8 +724,6 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& co
 
         if (mParameterCache.mTargetType == hax::TargetType::POINTS) {
 
-            const bool automaticSorting(evalInt("autosort", 0, time) != 0);
-
             UT_String pointsStr;
             evalString(pointsStr, "pointsgroup", 0, time);
             const std::string pointsGroup = pointsStr.toStdString();
@@ -834,8 +747,6 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& co
 
                 mCompilerCache.mPointExecutable->execute(*points, &pointsGroup);
 
-                if (!automaticSorting) continue;
-
                 if (mCompilerCache.mRequiresDeletion) {
                     openvdb::points::deleteFromGroup(points->tree(), "dead", false, false);
                 }
@@ -856,15 +767,22 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& co
                 if (vdbPrim->getConstGridPtr()->isType<points::PointDataGrid>()) continue;
                 vdbPrim->makeGridUnique();
 
-                const std::string& name = vdbPrim->getConstGridPtr()->getName();
+                const std::string name = vdbPrim->getGridName();
                 if (names.count(name)) {
                     addWarning(SOP_MESSAGE,
                         std::string("Multiple VDBs \"" + name + "\" encountered. "
                         "Only the first grid will be processed.").c_str());
                 }
 
+                // AX determines the grid access from the grid name. Houdini only
+                // updates the VDB Grid name on de-serialization, so ensure the
+                // grid's metadata name is up-to-date
+
+                const openvdb::GridBase::Ptr grid = vdbPrim->getGridPtr();
+                if (name != grid->getName()) grid->setName(name);
+
                 names.insert(name);
-                grids.emplace_back(vdbPrim->getGridPtr());
+                grids.emplace_back(grid);
                 guPrims.emplace_back(vdbPrim);
             }
 
@@ -889,9 +807,9 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::cookVDBSop(OP_Context& co
 }
 
 bool
-VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evalInsertHScriptVariable(const std::string& name,
-                                                                      const std::string& accessedType,
-                                                                      ax::CustomData& data)
+SOP_OpenVDB_AX::Cache::evalInsertHScriptVariable(const std::string& name,
+                                                 const std::string& accessedType,
+                                                 ax::CustomData& data)
 {
     OP_Director* const director = OPgetDirector();
     OP_CommandManager* const manager = director ? director->getCommandManager() : nullptr;
@@ -934,11 +852,7 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evalInsertHScriptVariable
 
         // not a global variable, attempt to evaluate as a local
 
-#if VDB_COMPILABLE_SOP
         OP_Node* self = this->cookparms()->getCwd();
-#else
-        OP_Node* self = this;
-#endif
 
         OP_Channels* channels = self->getChannels();
         if (!channels) return false;
@@ -964,21 +878,17 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evalInsertHScriptVariable
         else {
             fpreal value;
             if (channels->getVariableValue(value, index, var->id, /*thread*/0)) {
-                valueFloatPtr.reset(new fpreal32(value));
+                valueFloatPtr.reset(new fpreal32(static_cast<fpreal32>(value)));
             }
         }
 
         // If the channel is time dependent, ensure it's propagated to this node
 
         if (valueFloatPtr || valueStrPtr) {
-#if VDB_COMPILABLE_SOP
             DEP_MicroNode* dep = this->cookparms()->depnode();
             if (dep && !dep->isTimeDependent() && var->isTimeDependent()) {
                 dep->setTimeDependent(true);
             }
-#else
-            this->flags().timeDep |= var->isTimeDependent();
-#endif
         }
     }
 
@@ -1018,9 +928,9 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evalInsertHScriptVariable
 }
 
 void
-VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evaluateExternalExpressions(const float time,
-                                                                    const hax::ChannelExpressionSet& set,
-                                                                    const bool hvars)
+SOP_OpenVDB_AX::Cache::evaluateExternalExpressions(const double time,
+                                                   const hax::ChannelExpressionSet& set,
+                                                   const bool hvars)
 {
     using VectorData = TypedMetadata<math::Vec3<float>>;
     using FloatData = TypedMetadata<float>;
@@ -1034,15 +944,9 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evaluateExternalExpressio
     // cooked as a verb through python and we'll be unable to evaluate relative
     // references.
 
-#if VDB_COMPILABLE_SOP
     OP_Node* self = this->cookparms()->getCwd();
     const bool hasSrcNode = this->cookparms()->getSrcNode() != nullptr;
     DEP_MicroNode* dep = this->cookparms()->depnode();
-#else
-    SOP_OpenVDB_AX* self = this;
-    const bool hasSrcNode = true;
-    DEP_MicroNode* dep = &(this->dataMicroNode());
-#endif
 
     for (const hax::ChannelExpressionPair& expresionPair : set) {
 
@@ -1162,9 +1066,9 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evaluateExternalExpressio
                 }
                 else {
                     // parm was a direct parm
-                    value[0] = node->evalFloat(index, 0, time);
-                    value[1] = node->evalFloat(index, 1, time);
-                    value[2] = node->evalFloat(index, 2, time);
+                    value[0] = static_cast<float>(node->evalFloat(index, 0, time));
+                    value[1] = static_cast<float>(node->evalFloat(index, 1, time));
+                    value[2] = static_cast<float>(node->evalFloat(index, 2, time));
                 }
 
                 VectorData::Ptr vecData(new VectorData(value));
@@ -1192,7 +1096,7 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evaluateExternalExpressio
                 assert(subIndex != -1);
 
                 // use evalFloat rather than parm->getValue() to wrap the conversion to a float
-                const float value = node->evalFloat(index, subIndex, time);
+                const float value = static_cast<float>(node->evalFloat(index, subIndex, time));
 
                 FloatData::Ptr floatData(new FloatData(value));
                 data.insertData(nameOrPath, floatData);
@@ -1251,14 +1155,9 @@ VDB_NODE_OR_CACHE(VDB_COMPILABLE_SOP, SOP_OpenVDB_AX)::evaluateExternalExpressio
                 // add all parms of this ramps multi parm as a dependency to this
                 // micronode if it exists
 
-#if UT_MAJOR_VERSION_INT <= 15
-                const OP_InterestRef ref(*this, OP_INTEREST_DATA);
-                OP_Node::addMultiparmInterests(ref, node, parm);
-#else
                 if (dep) {
                     OP_Node::addMultiparmInterests(*dep, node, parm);
                 }
-#endif
             }
         }
         else {

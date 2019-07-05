@@ -42,9 +42,10 @@
 #include "FunctionTypes.h"
 #include "Types.h"
 
+#include <openvdb_ax/version.h>
 #include <openvdb_ax/compiler/CompilerOptions.h>
 
-#include <openvdb_ax/version.h>
+#include <unordered_map>
 
 namespace openvdb {
 OPENVDB_USE_VERSION_NAMESPACE
@@ -102,7 +103,7 @@ public:
         const bool mInternal;
     };
 
-    using RegistryMap = std::map<std::string, RegisteredFunction>;
+    using RegistryMap = std::unordered_map<std::string, RegisteredFunction>;
 
     /// @brief  Insert and register a function base object to a function identifier.
     /// @note   Throws if the identifier is already registered
@@ -169,13 +170,6 @@ public:
 private:
     RegistryMap mMap;
 };
-
-/// @brief Creates a registry with the standard set of registered functions including math functions,
-///        point functions and volume functions
-/// @param The current function options
-///
-FunctionRegistry::UniquePtr createStandardRegistry(const FunctionOptions& op);
-
 
 }
 }

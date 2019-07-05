@@ -106,7 +106,8 @@ struct LeafLocalData
             points::point_group_internal::GroupInfo::groupBits();
 
         if (mArrays.empty() || mOffset == maxGroupsInArray) {
-            mArrays.emplace_back(new GroupArrayT(mPointCount));
+            assert(mPointCount < static_cast<size_t>(std::numeric_limits<openvdb::Index>::max()));
+            mArrays.emplace_back(new GroupArrayT(static_cast<openvdb::Index>(mPointCount)));
             mOffset = 0;
         }
 
