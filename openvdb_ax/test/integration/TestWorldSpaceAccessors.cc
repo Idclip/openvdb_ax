@@ -73,12 +73,12 @@ TestWorldSpaceAccessors::testWorldSpaceAssign()
     openvdb::points::PointDataTree* tree = &(grid->tree());
 
     // @note  snippet moves all points to a single leaf node
-    CPPUNIT_ASSERT_EQUAL(openvdb::points::pointCount(*tree), 4ul);
+    CPPUNIT_ASSERT_EQUAL(openvdb::points::pointCount(*tree), openvdb::Index64(4));
     CPPUNIT_ASSERT_NO_THROW(unittest_util::wrapExecution(*grid, "test/snippets/worldspace/worldSpaceAssign"));
 
     // Tree is modified if points are moved
     tree = &(grid->tree());
-    CPPUNIT_ASSERT_EQUAL(openvdb::points::pointCount(*tree), 4ul);
+    CPPUNIT_ASSERT_EQUAL(openvdb::points::pointCount(*tree), openvdb::Index64(4));
 
     // test that P_original has the world-space value of the P attribute prior to running this snippet.
     // test that P_new has the expected world-space P value

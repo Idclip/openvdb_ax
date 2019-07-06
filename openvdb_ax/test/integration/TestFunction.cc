@@ -264,8 +264,15 @@ void
 TestFunction::testFunctionPow()
 {
     mHarness.addAttributes<float>(unittest_util::nameSequence("float_test", 5),
-        {1.0, pow(3.0, -2.1), pow(4.7f, -4.3f), pow(4.7f, 3), 0.00032f});
-    mHarness.addAttribute<int>("int_test1", static_cast<int>(pow(3, 5)));
+        {
+            1.0f,
+            static_cast<float>(openvdb::math::Pow(3.0, -2.1)),
+            openvdb::math::Pow(4.7f, -4.3f),
+            openvdb::math::Pow(4.7f, 3),
+            0.00032f
+        });
+
+    mHarness.addAttribute<int>("int_test1", static_cast<int>(openvdb::math::Pow(3, 5)));
 
     mHarness.executeCode("test/snippets/function/functionPow");
 

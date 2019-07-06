@@ -176,7 +176,7 @@ struct CollectForEach<ContainerType, TypeList<T, Ts...>> {
 };
 }
 
-template<typename NodeT, typename ContainerType = std::vector<const NodeT*>>
+template<typename NodeT, typename ContainerType>
 inline void collectNodeType(const ast::Node& node, ContainerType& array)
 {
     visitNodeType<NodeT>(node, [&](const NodeT& node) -> bool {
@@ -185,7 +185,7 @@ inline void collectNodeType(const ast::Node& node, ContainerType& array)
     });
 }
 
-template <typename NodeTypeList, typename ContainerType = std::vector<const Node*>>
+template <typename NodeTypeList, typename ContainerType>
 inline void collectNodeTypes(const ast::Node& node, ContainerType& array)
 {
     internal::CollectForEach<ContainerType, NodeTypeList>::exec(node, array);

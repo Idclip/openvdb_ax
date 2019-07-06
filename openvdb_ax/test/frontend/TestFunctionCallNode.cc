@@ -53,9 +53,9 @@ static const unittest_util::CodeTests tests =
     { "A();",               Node::Ptr(new FunctionCall("A")) },
     { "D1f();",             Node::Ptr(new FunctionCall("D1f")) },
     { "f(a);",              Node::Ptr(new FunctionCall("f",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Local("a")
-                                })
+                                )
                             ))
     },
     { "a(a,1);",            Node::Ptr(new FunctionCall("a",
@@ -66,25 +66,25 @@ static const unittest_util::CodeTests tests =
                             ))
     },
     { "func(1);",           Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Value<int32_t>(1)
-                                })
+                                )
                             ))
     },
     { "func(\"string\");",  Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Value<std::string>("string")
-                                })
+                                )
                             ))
     },
     { "func(true);",        Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Value<bool>(true)
-                                })
+                                )
                             ))
     },
     { "func({a,b,c});",     Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new ArrayPack(
                                         new ExpressionList({
                                             new Local("a"),
@@ -92,61 +92,61 @@ static const unittest_util::CodeTests tests =
                                             new Local("c"),
                                         })
                                     )
-                                })
+                                )
                             ))
     },
     { "func(@a);",          Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Attribute("a", CoreType::FLOAT, true)
-                                })
+                                )
                             ))
     },
     { "func(++a);",         Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Crement(new Local("a"), Crement::Operation::Increment, false)
-                                })
+                                )
                             ))
     },
     { "func(~a);",          Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new UnaryOperator(OperatorToken::BITNOT, new Local("a"))
-                                })
+                                )
                             ))
     },
     { "func((a));",         Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Local("a")
-                                })
+                                )
                             ))
     },
     { "func1(func2());",    Node::Ptr(new FunctionCall("func1",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new FunctionCall("func2")
-                                })
+                                )
                             ))
     },
     { "func(a=b);",         Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new AssignExpression(new Local("a"), new Local("b"), false)
-                                })
+                                )
                             ))
     },
     { "func(a==b);",        Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new BinaryOperator(OperatorToken::EQUALSEQUALS, new Local("a"), new Local("b"))
-                                })
+                                )
                             ))
     },
     { "func(a.x);",         Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new ArrayUnpack(new Local("a"), new Value<int32_t>(0))
-                                })
+                                )
                             ))
     },
     { "func(bool(a));",     Node::Ptr(new FunctionCall("func",
-                                new ExpressionList({
+                                new ExpressionList(
                                     new Cast(new Local("a"), CoreType::BOOL)
-                                })
+                                )
                             ))
     },
     { "func(a,b,c,d,e,f);", Node::Ptr(new FunctionCall("func",

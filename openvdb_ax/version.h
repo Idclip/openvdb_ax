@@ -102,7 +102,7 @@ inline constexpr const char* getLibraryVersionString() { return OPENVDB_AX_LIBRA
     #define OPENVDB_NO_ATTRIBUTES_WARNING_BEGIN
     #define OPENVDB_NO_ATTRIBUTES_WARNING_END
 #elif defined __clang__
-    #define OPENVDB_NO_DEPRECATION_WARNING_BEGIN \
+    #define OPENVDB_NO_ATTRIBUTES_WARNING_BEGIN \
         _Pragma("clang diagnostic push") \
         _Pragma("clang diagnostic ignored \"-Wignored-attributes\"")
     #define OPENVDB_NO_ATTRIBUTES_WARNING_END \
