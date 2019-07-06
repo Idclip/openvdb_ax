@@ -71,6 +71,10 @@ struct Visitor
     /// @brief  Completely reverse the traversal order
     inline bool reverse() const { return false; }
 
+    /// @brief  Whether to visit nodes mutiple times at each stage of
+    ///   their class hierarchy
+    inline bool visitNodeHierarchies() const { return false; }
+
     ///
 
     bool traverse(NodeType<ast::Node>* node) {
@@ -78,7 +82,6 @@ struct Visitor
         switch (node->nodetype()) {
             case Node::TreeNode : return this->derived().traverse(static_cast<NodeType<ast::Tree>*>(node));
             case Node::BlockNode : return this->derived().traverse(static_cast<NodeType<ast::Block>*>(node));
-            case Node::ExpressionNode : return this->derived().traverse(static_cast<NodeType<ast::Expression>*>(node));
             case Node::ExpressionListNode : return this->derived().traverse(static_cast<NodeType<ast::ExpressionList>*>(node));
             case Node::ConditionalStatementNode : return this->derived().traverse(static_cast<NodeType<ast::ConditionalStatement>*>(node));
             case Node::AssignExpressionNode : return this->derived().traverse(static_cast<NodeType<ast::AssignExpression>*>(node));
@@ -201,44 +204,64 @@ struct Visitor
         return this->defaultTraversal<ast::Value<std::string>>(val);
     }
 
-    inline bool visit(NodeType<ast::Tree>*) { return true; };
-    inline bool visit(NodeType<ast::Block>*) { return true; };
-    inline bool visit(NodeType<ast::ExpressionList>*) { return true; };
-    inline bool visit(NodeType<ast::ConditionalStatement>*) { return true; };
-    inline bool visit(NodeType<ast::AssignExpression>*) { return true; };
-    inline bool visit(NodeType<ast::Crement>*) { return true; };
-    inline bool visit(NodeType<ast::UnaryOperator>*) { return true; };
-    inline bool visit(NodeType<ast::BinaryOperator>*) { return true; };
-    inline bool visit(NodeType<ast::Cast>*) { return true; };
-    inline bool visit(NodeType<ast::FunctionCall>*) { return true; };
-    inline bool visit(NodeType<ast::Return>*) { return true; };
-    inline bool visit(NodeType<ast::Attribute>*) { return true; };
-    inline bool visit(NodeType<ast::ExternalVariable>*) { return true; };
-    inline bool visit(NodeType<ast::DeclareLocal>*) { return true; };
-    inline bool visit(NodeType<ast::Local>*) { return true; };
-    inline bool visit(NodeType<ast::ArrayPack>*) { return true; };
-    inline bool visit(NodeType<ast::ArrayUnpack>*) { return true; };
-    inline bool visit(NodeType<ast::Value<bool>>*) { return true; };
-    inline bool visit(NodeType<ast::Value<int16_t>>*) { return true; };
-    inline bool visit(NodeType<ast::Value<int32_t>>*) { return true; };
-    inline bool visit(NodeType<ast::Value<int64_t>>*) { return true; };
-    inline bool visit(NodeType<ast::Value<float>>*) { return true; };
-    inline bool visit(NodeType<ast::Value<double>>*) { return true; };
-    inline bool visit(NodeType<ast::Value<std::string>>*) { return true; };
+    // visits for pure virtual nodes. These are only hit if
+    // visitNodeHierarchies is true
+    inline bool visit(NodeType<ast::Node>*) { return true; }
+    inline bool visit(NodeType<ast::Statement>*) { return true; }
+    inline bool visit(NodeType<ast::Expression>*) { return true; }
+    inline bool visit(NodeType<ast::Keyword>*) { return true; }
+    inline bool visit(NodeType<ast::Variable>*) { return true; }
+    inline bool visit(NodeType<ast::ValueBase>*) { return true; }
+
+    // visits for all concrete node types
+    inline bool visit(NodeType<ast::Tree>*) { return true; }
+    inline bool visit(NodeType<ast::Block>*) { return true; }
+    inline bool visit(NodeType<ast::ExpressionList>*) { return true; }
+    inline bool visit(NodeType<ast::ConditionalStatement>*) { return true; }
+    inline bool visit(NodeType<ast::AssignExpression>*) { return true; }
+    inline bool visit(NodeType<ast::Crement>*) { return true; }
+    inline bool visit(NodeType<ast::UnaryOperator>*) { return true; }
+    inline bool visit(NodeType<ast::BinaryOperator>*) { return true; }
+    inline bool visit(NodeType<ast::Cast>*) { return true; }
+    inline bool visit(NodeType<ast::FunctionCall>*) { return true; }
+    inline bool visit(NodeType<ast::Return>*) { return true; }
+    inline bool visit(NodeType<ast::Attribute>*) { return true; }
+    inline bool visit(NodeType<ast::ExternalVariable>*) { return true; }
+    inline bool visit(NodeType<ast::DeclareLocal>*) { return true; }
+    inline bool visit(NodeType<ast::Local>*) { return true; }
+    inline bool visit(NodeType<ast::ArrayPack>*) { return true; }
+    inline bool visit(NodeType<ast::ArrayUnpack>*) { return true; }
+    inline bool visit(NodeType<ast::Value<bool>>*) { return true; }
+    inline bool visit(NodeType<ast::Value<int16_t>>*) { return true; }
+    inline bool visit(NodeType<ast::Value<int32_t>>*) { return true; }
+    inline bool visit(NodeType<ast::Value<int64_t>>*) { return true; }
+    inline bool visit(NodeType<ast::Value<float>>*) { return true; }
+    inline bool visit(NodeType<ast::Value<double>>*) { return true; }
+    inline bool visit(NodeType<ast::Value<std::string>>*) { return true; }
 
 private:
-    // For const visits, simply return the child node
-    template <bool V>
-    inline typename std::enable_if<V, const ast::Node*>::type
-    childnode(const ast::Node* node, const size_t idx) {
-        return node->child(idx);
+    // For const visits, simply return the node
+    template <bool V, typename T>
+    inline typename std::enable_if<V, const T*>::type
+    node(const T& node) {
+        return &node;
     }
 
-    // For non-const visits, static cast then cosnt cast the node.
-    template <bool V>
-    inline typename std::enable_if<!V, ast::Node*>::type
-    childnode(const ast::Node* node, const size_t idx) {
-        return const_cast<ast::Node*>(static_cast<const ast::Node*>(node->child(idx)));
+    // For non-const visits, const cast the node.
+    template <bool V, typename T>
+    inline typename std::enable_if<!V, typename std::remove_const<T>::type*>::type
+    node(const T& node) {
+        return &(const_cast<T&>(node));
+    }
+
+    template <typename T>
+    bool hierarchyvisits(T& node)
+    {
+        if (!this->derived().visit(this->node<ConstVisit>(node))) return false;
+        if (auto base = node.T::basetype()) {
+            return hierarchyvisits(*base);
+        }
+        return true;
     }
 
     template <typename NodeT>
@@ -251,7 +274,8 @@ private:
             if (this->derived().reverse()) {
                 if (children != 0) {
                     for (int64_t i = static_cast<int64_t>(children - 1); i >= 0; --i) {
-                        if (!this->derived().traverse(this->childnode<ConstVisit>(node, i))) {
+                        auto child = this->node<ConstVisit>(*(node->child(i)));
+                        if (!this->derived().traverse(child)) {
                             return false;
                         }
                     }
@@ -259,19 +283,31 @@ private:
             }
             else {
                 for (size_t i = 0; i < children; ++i) {
-                    if (!this->derived().traverse(this->childnode<ConstVisit>(node, i))) {
+                    auto child = this->node<ConstVisit>(*(node->child(i)));
+                    if (!this->derived().traverse(child)) {
                         return false;
                     }
                 }
             }
-            return this->derived().visit(node);
+            if (this->derived().visitNodeHierarchies()) {
+                return this->hierarchyvisits(*node);
+            }
+            else {
+                return this->derived().visit(node);
+            }
         }
         else {
-            if (!this->derived().visit(node)) return false;
+            if (this->derived().visitNodeHierarchies()) {
+                if (!this->hierarchyvisits(*node)) return false;
+            }
+            else {
+                if (!this->derived().visit(node)) return false;
+            }
             if (this->derived().reverse()) {
                 if (children != 0) {
                     for (int64_t i = static_cast<int64_t>(children - 1); i >= 0; --i) {
-                        if (!this->derived().traverse(this->childnode<ConstVisit>(node, i))) {
+                        auto child = this->node<ConstVisit>(*(node->child(i)));
+                        if (!this->derived().traverse(child)) {
                             return false;
                         }
                     }
@@ -279,7 +315,8 @@ private:
             }
             else {
                 for (size_t i = 0; i < children; ++i) {
-                    if (!this->derived().traverse(this->childnode<ConstVisit>(node, i))) {
+                    auto child = this->node<ConstVisit>(*(node->child(i)));
+                    if (!this->derived().traverse(child)) {
                         return false;
                     }
                 }

@@ -198,6 +198,10 @@ struct VisitNodeType :
     using ast::Visitor<VisitNodeType<NodeT, OpT>>::traverse;
     using ast::Visitor<VisitNodeType<NodeT, OpT>>::visit;
 
+    inline bool visitNodeHierarchies() const {
+        return std::is_abstract<NodeT>::value;
+    }
+
     VisitNodeType(const OpT& op) : mOp(op) {}
     ~VisitNodeType() = default;
     inline bool visit(const NodeT* node) {

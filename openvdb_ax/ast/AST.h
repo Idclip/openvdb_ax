@@ -92,7 +92,6 @@ struct Node
     enum NodeType {
         TreeNode,
         BlockNode,
-        ExpressionNode,
         ExpressionListNode,
         ConditionalStatementNode,
         AssignExpressionNode,
@@ -129,6 +128,7 @@ struct Node
     virtual NodeType nodetype() const = 0;
     virtual const char* nodename() const = 0;
     virtual const char* subname() const = 0;
+    virtual const Node* basetype() const { return nullptr; }
 
     template <typename NodeT>
     inline bool isType() const {
@@ -200,6 +200,7 @@ struct Statement : public Node
     virtual Statement* copy() const override = 0;
     const char* nodename() const override { return "statement"; }
     const char* subname() const override { return "stm"; }
+    const Node* basetype() const override { return this; }
 };
 
 // Expressions only contain identifiers, literals and operators, and can be
@@ -214,6 +215,7 @@ struct Expression : public Statement
     virtual Expression* copy() const override = 0;
     const char* nodename() const override { return "expression"; }
     const char* subname() const override { return "exp"; }
+    const Statement* basetype() const override { return this; }
 };
 
 struct Block : public Statement
@@ -242,6 +244,7 @@ struct Block : public Statement
     NodeType nodetype() const override { return Node::BlockNode; }
     const char* nodename() const override { return "block"; }
     const char* subname() const override { return "blk"; }
+    const Statement* basetype() const override { return this; }
     //
     size_t children() const override final { return this->size(); }
     const Statement* child(const size_t i) const override final {
@@ -291,6 +294,7 @@ struct Tree : public Node
     NodeType nodetype() const override { return Node::TreeNode; }
     const char* nodename() const override { return "tree"; }
     const char* subname() const override { return "tree"; }
+    const Node* basetype() const override { return this; }
     //
     size_t children() const override final { return 1; }
     const Block* child(const size_t i) const override final {
@@ -329,6 +333,7 @@ struct ExpressionList : public Statement
     NodeType nodetype() const override { return Node::ExpressionListNode; }
     const char* nodename() const override { return "expression list"; }
     const char* subname() const override { return "expl"; }
+    const Statement* basetype() const override { return this; }
     //
     size_t children() const override final { return this->size(); }
     const Expression* child(const size_t i) const override final {
@@ -388,6 +393,7 @@ struct ConditionalStatement : public Statement
     NodeType nodetype() const override { return Node::ConditionalStatementNode; }
     const char* nodename() const override { return "conditional statement"; }
     const char* subname() const override { return "cond"; }
+    const Statement* basetype() const override { return this; }
     //
     size_t children() const override final { return 3; }
     const Statement* child(const size_t i) const override final {
@@ -470,6 +476,7 @@ struct BinaryOperator : public Expression
     NodeType nodetype() const override { return Node::BinaryOperatorNode; }
     const char* nodename() const override { return "binary"; }
     const char* subname() const override { return "bin"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 2; }
     const Expression* child(const size_t i) const override final {
@@ -531,6 +538,7 @@ struct AssignExpression : public Expression
     NodeType nodetype() const override { return Node::AssignExpressionNode; }
     const char* nodename() const override { return "assignment expression"; }
     const char* subname() const override { return "asgn"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 2; }
     const Expression* child(const size_t i) const override final {
@@ -613,6 +621,7 @@ struct Crement : public Expression
     NodeType nodetype() const override { return Node::CrementNode; }
     const char* nodename() const override { return "crement"; }
     const char* subname() const override { return "crmt"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 1; }
     const Expression* child(const size_t i) const override final {
@@ -665,6 +674,7 @@ struct UnaryOperator : public Expression
     NodeType nodetype() const override { return Node::UnaryOperatorNode; }
     const char* nodename() const override { return "unary"; }
     const char* subname() const override { return "unry"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 1; }
     const Expression* child(const size_t i) const override final {
@@ -712,6 +722,7 @@ struct Cast : public Expression
     NodeType nodetype() const override { return Node::CastNode; }
     const char* nodename() const override { return "cast"; }
     const char* subname() const override { return "cast"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 1; }
     const Expression* child(const size_t i) const override final {
@@ -759,6 +770,7 @@ struct FunctionCall : public Expression
     NodeType nodetype() const override { return Node::FunctionCallNode; }
     const char* nodename() const override { return "function call"; }
     const char* subname() const override { return "call"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 1; }
     const ExpressionList* child(const size_t i) const override final {
@@ -790,6 +802,7 @@ struct Keyword : public Expression
     ~Keyword() override = default;
     const char* nodename() const override { return "keyword"; }
     const char* subname() const override { return "keyw"; }
+    const Expression* basetype() const override { return this; }
     size_t children() const override final { return 0; }
     const Node* child(const size_t) const override final {
         return nullptr;
@@ -802,6 +815,7 @@ struct Return : public Keyword
     ~Return() override = default;
     Return* copy() const override final { return new Return(*this); }
     NodeType nodetype() const override { return Node::ReturnNode; }
+    const Keyword* basetype() const override { return this; }
     const char* nodename() const override { return "return"; }
     const char* subname() const override { return "ret"; }
 };
@@ -819,6 +833,7 @@ struct Variable : public Expression
     virtual Variable* copy() const override = 0;
     const char* nodename() const override { return "var"; }
     const char* subname() const override { return "var"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override { return 0; }
     const Node* child(const size_t) const override {
@@ -853,6 +868,7 @@ struct Attribute : public Variable
     NodeType nodetype() const override { return Node::AttributeNode; }
     const char* nodename() const override { return "attribute"; }
     const char* subname() const override { return "atr"; }
+    const Variable* basetype() const override { return this; }
     //
     inline bool inferred() const { return mTypeInferred; }
     inline tokens::CoreType type() const { return mType; }
@@ -906,6 +922,7 @@ struct ExternalVariable : public Variable
     NodeType nodetype() const override { return Node::ExternalVariableNode; }
     const char* nodename() const override { return "external"; }
     const char* subname() const override { return "ext"; }
+    const Variable* basetype() const override { return this; }
     //
     inline tokens::CoreType type() const { return mType; }
     inline std::string typestr() const { return ast::tokens::typeStringFromToken(mType); }
@@ -955,6 +972,7 @@ struct DeclareLocal : public Variable
     NodeType nodetype() const override { return Node::DeclareLocalNode; }
     const char* nodename() const override { return "declaration"; }
     const char* subname() const override { return "dcl"; }
+    const Variable* basetype() const override { return this; }
     //
     inline tokens::CoreType type() const { return mType; }
     inline std::string typestr() const { return ast::tokens::typeStringFromToken(mType); }
@@ -974,6 +992,7 @@ struct Local : public Variable
     NodeType nodetype() const override { return Node::LocalNode; }
     const char* nodename() const override { return "local"; }
     const char* subname() const override { return "lcl"; }
+    const Variable* basetype() const override { return this; }
 };
 
 struct ArrayUnpack : public Expression
@@ -1005,6 +1024,7 @@ struct ArrayUnpack : public Expression
     NodeType nodetype() const override { return Node::ArrayUnpackNode; }
     const char* nodename() const override { return "array unpack"; }
     const char* subname() const override { return "unpk"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 2; }
     const Statement* child(const size_t i) const override final {
@@ -1064,6 +1084,7 @@ struct ArrayPack : public Expression
     NodeType nodetype() const override { return Node::ArrayPackNode; }
     const char* nodename() const override { return "array pack"; }
     const char* subname() const override { return "pack"; }
+    const Expression* basetype() const override { return this; }
     //
     size_t children() const override final { return 1; }
     const ExpressionList* child(const size_t i) const override final {
@@ -1092,6 +1113,7 @@ private:
 struct ValueBase : public Expression
 {
     ~ValueBase() override = default;
+    const Expression* basetype() const override { return this; }
 };
 
 template <typename T>
@@ -1161,6 +1183,7 @@ struct Value : public ValueBase
         if (std::is_same<T, float>::value)   return "flt";
         if (std::is_same<T, double>::value)  return "dble";
     }
+    const ValueBase* basetype() const override { return this; }
     //
     size_t children() const override final { return 0; }
     const Node* child(const size_t) const override final { return nullptr; }
@@ -1193,6 +1216,7 @@ struct Value<std::string> : public ValueBase
     NodeType nodetype() const override { return Node::ValueStrNode; }
     const char* nodename() const override { return "string value"; }
     const char* subname() const override { return "str"; }
+    const ValueBase* basetype() const override { return this; }
     //
     size_t children() const override final { return 0; }
     const Node* child(const size_t) const override final { return nullptr; }
