@@ -104,11 +104,12 @@ void catalogueVariables(const ast::Node& node,
         const ast::Node* parent = child->parent();
         bool read = false, write = false;
         while (parent && !(write && read)) {
+            const ast::Node::NodeType type = parent->nodetype();
             // crement operations read and write
-            if (parent->isType<ast::Crement>()) {
+            if (type == ast::Node::CrementNode) {
                 read = write = true;
             }
-            else if (parent->isType<ast::AssignExpression>()) {
+            else if (type == ast::Node::AssignExpressionNode) {
                 const ast::AssignExpression* assignment =
                     static_cast<const ast::AssignExpression*>(parent);
                 if (assignment->lhs() == child) {
@@ -125,7 +126,7 @@ void catalogueVariables(const ast::Node& node,
                     read = true;
                 }
             }
-            else if (parent->isType<ast::FunctionCall>()) {
+            else if (type == ast::Node::FunctionCallNode) {
                 // @todo  We currently can't detect if attributes are being passed by
                 //   pointer and being modified automatically. This is a major limitation
                 //   as it means any attribute passed into any function directly must
@@ -209,7 +210,8 @@ void variableDependencies(const ast::Variable& var,
     // collect all occurrences of this var up to and including
     // it's current usage, terminating traversal afterwards
     std::vector<const ast::Variable*> usage;
-    const bool attributeVisit = var.isType<ast::Attribute>();
+    const bool attributeVisit =
+        (var.nodetype() == ast::Node::AttributeNode);
     const ast::Attribute* asAttrib = attributeVisit ?
         static_cast<const ast::Attribute*>(&var) : nullptr;
 
@@ -259,13 +261,14 @@ void variableDependencies(const ast::Variable& var,
         // track writable for conditionals
         bool written = false;
         while (const ast::Node* parent = child->parent()) {
-            if (parent->isType<ast::Crement>()) {
+            const ast::Node::NodeType type = parent->nodetype();
+            if (type == ast::Node::CrementNode) {
                 written = true;
                 if (!hasDep(use)) {
                     dependencies.emplace_back(use);
                 }
             }
-            else if (parent->isType<ast::ConditionalStatement>()) {
+            else if (type == ast::Node::ConditionalStatementNode) {
                 const ast::ConditionalStatement* conditional =
                     static_cast<const ast::ConditionalStatement*>(parent);
                 // traverse down and collect variables
@@ -282,7 +285,7 @@ void variableDependencies(const ast::Variable& var,
                     variableDependencies(*dep, dependencies);
                 }
             }
-            else if (parent->isType<ast::AssignExpression>()) {
+            else if (type == ast::Node::AssignExpressionNode) {
                 const ast::AssignExpression* assignment =
                     static_cast<const ast::AssignExpression*>(parent);
                 if (assignment->lhs() == child) {
@@ -298,7 +301,7 @@ void variableDependencies(const ast::Variable& var,
                     }
                 }
             }
-            else if (parent->isType<ast::FunctionCall>()) {
+            else if (type == ast::Node::FunctionCallNode) {
                 written = true;
                 // @todo  We currently can't detect if attributes are being passed by
                 //   pointer and being modified automatically. We have to link this
@@ -339,7 +342,7 @@ void attributeDependencyTokens(const ast::Tree& tree,
     variableDependencies(*var, deps);
 
     for (const auto& dep : deps) {
-        if (!dep->isType<ast::Attribute>()) continue;
+        if (dep->nodetype() != ast::Node::AttributeNode) continue;
         dependencies.emplace_back(static_cast<const ast::Attribute*>(dep)->tokenname());
     }
 

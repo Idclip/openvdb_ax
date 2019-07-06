@@ -130,7 +130,6 @@ struct Node
     virtual const char* nodename() const = 0;
     virtual const char* subname() const = 0;
 
-    // @todo replace with enum comp
     template <typename NodeT>
     inline bool isType() const {
         return dynamic_cast<const NodeT*>(this);
