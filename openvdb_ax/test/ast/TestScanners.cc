@@ -100,15 +100,139 @@ class TestScanners : public CppUnit::TestCase
 public:
 
     CPPUNIT_TEST_SUITE(TestScanners);
+    CPPUNIT_TEST(testVisitNodeType);
     CPPUNIT_TEST(testFirstLastLocation);
     CPPUNIT_TEST(testVariableDependencies);
     CPPUNIT_TEST_SUITE_END();
 
+    void testVisitNodeType();
     void testFirstLastLocation();
     void testVariableDependencies();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(TestScanners);
+
+void TestScanners::testVisitNodeType()
+{
+    size_t count = 0;
+    auto counter = [&](const Node& node) -> bool {
+        ++count; return true;
+    };
+
+    // "long@a;"
+    Node::Ptr node(new Attribute("a", CoreType::LONG));
+
+    visitNodeType<Node>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+
+    count = 0;
+    visitNodeType<Local>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(0), count);
+
+    count = 0;
+    visitNodeType<Variable>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+
+    count = 0;
+    visitNodeType<Attribute>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+
+    // "{1.0f, 2.0, 3};"
+    node.reset(new ArrayPack(
+        new ExpressionList({
+            new Value<float>(1.0f),
+            new Value<double>(2.0),
+            new Value<int64_t>(3)
+        })));
+
+    count = 0;
+    visitNodeType<Node>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(5), count);
+
+    count = 0;
+    visitNodeType<Local>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(0), count);
+
+    count = 0;
+    visitNodeType<ValueBase>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(3), count);
+
+    count = 0;
+    visitNodeType<ArrayPack>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+
+    count = 0;
+    visitNodeType<ExpressionList>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+
+    count = 0;
+    visitNodeType<Expression>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(4), count);
+
+    count = 0;
+    visitNodeType<Statement>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(5), count);
+
+    // "@a += v@b.x = x %= 1;"
+    // @note 13 explicit nodes + an implicit ExpressionList
+    // which is created by the ArrayUnpack and stores the components
+    node.reset(new AssignExpression(
+        new Attribute("a", CoreType::FLOAT, true),
+        new BinaryOperator(
+            OperatorToken::PLUS,
+            new Attribute("a", CoreType::FLOAT, true),
+            new AssignExpression(
+                new ArrayUnpack(
+                    new Attribute("b", CoreType::VEC3F),
+                    new Value<int32_t>(0)
+                ),
+                new AssignExpression(
+                    new Local("x"),
+                    new BinaryOperator(
+                        OperatorToken::MODULO,
+                        new Local("x"),
+                        new Value<int32_t>(1)
+                    ),
+                    true
+                ),
+                false
+            )
+        ),
+        true
+    ));
+
+    count = 0;
+    visitNodeType<Node>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(14), count);
+
+    count = 0;
+    visitNodeType<Local>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), count);
+
+    count = 0;
+    visitNodeType<Value<int>>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(2), count);
+
+    count = 0;
+    visitNodeType<ArrayPack>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(0), count);
+
+    count = 0;
+    visitNodeType<ArrayUnpack>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+
+    count = 0;
+    visitNodeType<AssignExpression>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(3), count);
+
+    count = 0;
+    visitNodeType<Expression>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(13), count);
+
+    count = 0;
+    visitNodeType<ExpressionList>(*node, counter);
+    CPPUNIT_ASSERT_EQUAL(size_t(1), count);
+}
 
 void TestScanners::testFirstLastLocation()
 {
