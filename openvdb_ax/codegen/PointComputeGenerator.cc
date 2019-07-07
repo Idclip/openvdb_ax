@@ -259,16 +259,10 @@ AttributeRegistry::Ptr PointComputeGenerator::generate(const ast::Tree& tree)
 
             llvm::Type* type = value->getType()->getPointerElementType();
             llvm::Type* strType = LLVMType<std::string>::get(mContext);
-            const bool usingPosition = access->name() == "P";
             const bool usingString = type == strType;
 
-            llvm::Value* handlePtr = usingPosition ?
-                mLLVMArguments.get("leaf_data") :
-                this->attributeHandleFromToken(token);
-
-            const FunctionBase::Ptr function = usingPosition ?
-                this->getFunction("setpointpws", mOptions, true) :
-                this->getFunction("setattribute", mOptions, true);
+            llvm::Value* handlePtr = this->attributeHandleFromToken(token);
+            const FunctionBase::Ptr function = this->getFunction("setattribute", mOptions, true);
 
             // load the result (if its a scalar)
             if (type->isIntegerTy() || type->isFloatingPointTy()) {
@@ -349,16 +343,11 @@ void PointComputeGenerator::getAttributeValue(const std::string& globalName, llv
     std::string name, type;
     isGlobalAttributeAccess(globalName, name, type);
 
-    // if accessing position the ptr we push back is actually to the leaf_data
-
-    const bool usingPosition = name == "P";
-    llvm::Value* handlePtr = usingPosition ?
-        mLLVMArguments.get("leaf_data") :
-        this->attributeHandleFromToken(globalName);
+    llvm::Value* handlePtr = this->attributeHandleFromToken(globalName);
 
     std::vector<llvm::Value*> args;
 
-    const bool usingString(!usingPosition && type == "string");
+    const bool usingString = type == "string";
 
     if (usingString) {
         const FunctionBase::Ptr function = this->getFunction("strattribsize", mOptions, true);
@@ -389,9 +378,7 @@ void PointComputeGenerator::getAttributeValue(const std::string& globalName, llv
 
     if (usingString) args.emplace_back(mLLVMArguments.get("leaf_data"));
 
-    const FunctionBase::Ptr function = usingPosition ?
-        this->getFunction("getpointpws", mOptions, true) :
-        this->getFunction("getattribute", mOptions, true);
+    const FunctionBase::Ptr function = this->getFunction("getattribute", mOptions, true);
     function->execute(args, mLLVMArguments.map(), mBuilder, nullptr, /*add output args*/false);
 }
 

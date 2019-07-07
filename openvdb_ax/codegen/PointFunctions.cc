@@ -309,25 +309,6 @@ private:
                                      void* const newDataPtr);
 };
 
-struct SetPointPWS : public FunctionBase
-{
-    DEFINE_IDENTIFIER_CONTEXT_DOC("setpointpws", FunctionBase::Point,
-        "Internal function for setting the value of a the world space position of the point.")
-
-    inline static Ptr create(const FunctionOptions&) { return Ptr(new SetPointPWS()); }
-
-    SetPointPWS() : FunctionBase({
-        DECLARE_FUNCTION_SIGNATURE(set_point_pws)
-    }) {}
-
-private:
-
-    static void set_point_pws(void* newDataPtr,
-                              const uint64_t index,
-                              openvdb::Vec3s* value);
-};
-
-
 struct StringAttribSize : public FunctionBase
 {
     DEFINE_IDENTIFIER_CONTEXT_DOC("strattribsize", FunctionBase::Point,
@@ -345,7 +326,6 @@ private:
                                   const void* const newDataPtr);
 
 };
-
 
 struct GetAttribute : public FunctionBase
 {
@@ -401,23 +381,6 @@ private:
                                      const void* const newDataPtr);
 };
 
-struct GetPointPWS : public FunctionBase
-{
-    DEFINE_IDENTIFIER_CONTEXT_DOC("getpointpws", FunctionBase::Point,
-        "Internal function for getting the value of a the world space position of the point.")
-
-    inline static Ptr create(const FunctionOptions&) { return Ptr(new GetPointPWS()); }
-
-    GetPointPWS() : FunctionBase({
-        DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_point_pws, 1)
-    }) {}
-
-private:
-
-    static void get_point_pws(void* newDataPtr,
-                              const uint64_t index,
-                              openvdb::Vec3s* value);
-};
 
 namespace point_functions_internal
 {
@@ -561,16 +524,6 @@ void SetAttribute::set_attribute_string(void* attributeHandle,
     }
 }
 
-void SetPointPWS::set_point_pws(void* leafDataPtr,
-                                const uint64_t index,
-                                openvdb::Vec3s* value)
-{
-    openvdb::ax::compiler::LeafLocalData* leafData =
-        static_cast<openvdb::ax::compiler::LeafLocalData*>(leafDataPtr);
-    leafData->setPosition(*value, index);
-}
-
-
 void GetAttribute::get_attribute_string(void* attributeHandle,
                                       const uint64_t index,
                                       uint8_t* value,
@@ -597,16 +550,6 @@ void GetAttribute::get_attribute_string(void* attributeHandle,
     char* sarray = reinterpret_cast<char*>(value);
     strcpy(sarray, data.c_str());
 }
-
-void GetPointPWS::get_point_pws(void* leafDataPtr,
-                                const uint64_t index,
-                                openvdb::Vec3s* value)
-{
-    openvdb::ax::compiler::LeafLocalData* leafData =
-        static_cast<openvdb::ax::compiler::LeafLocalData*>(leafDataPtr);
-    (*value) = leafData->getPositions()[index];
-}
-
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -636,8 +579,6 @@ void insertVDBPointFunctions(FunctionRegistry& registry,
     add("getattribute", GetAttribute::create, true);
     add("setattribute", SetAttribute::create, true);
     add("strattribsize", StringAttribSize::create, true);
-    add("getpointpws", GetPointPWS::create, true);
-    add("setpointpws", SetPointPWS::create, true);
 
     // indirect internals
 

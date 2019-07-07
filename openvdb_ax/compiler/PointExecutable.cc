@@ -205,33 +205,32 @@ private:
 template<typename FilterT = openvdb::points::NullFilter>
 struct PointExecuterDeformer
 {
-    using LeafNodeT = openvdb::points::PointDataTree::LeafNodeType;
-
-    PointExecuterDeformer(std::vector<compiler::LeafLocalData::UniquePtr>& data,
-        const FilterT& filter)
-        : mData(data)
-        , mFilter(filter)
-        , mPositions(nullptr) {}
+    PointExecuterDeformer(const std::string& positionAttribute,
+        const FilterT& filter = FilterT())
+        : mFilter(filter)
+        , mPws(nullptr)
+        , mPositionAttribute(positionAttribute) {}
 
     template <typename LeafT>
-    void reset(const LeafT& leaf, const size_t idx)
+    void reset(const LeafT& leaf, const size_t)
     {
         mFilter.reset(leaf);
-        mPositions = &mData[idx]->getPositions();
+        mPws = points::AttributeHandle<Vec3f>::
+            create(leaf.constAttributeArray(mPositionAttribute));
     }
 
     template <typename IterT>
     void apply(Vec3d& position, const IterT& iter) const
     {
         if (mFilter.valid(iter)) {
-            assert(mPositions);
-            position = (*mPositions)[*iter];
+            assert(mPws);
+            position = Vec3d(mPws->get(*iter));
         }
     }
 
-    std::vector<compiler::LeafLocalData::UniquePtr>& mData;
-    FilterT                                          mFilter;
-    const compiler::LeafLocalData::PositionVector*   mPositions;
+    FilterT mFilter;
+    points::AttributeHandle<Vec3f>::Ptr mPws;
+    const std::string& mPositionAttribute;
 };
 
 
@@ -331,13 +330,33 @@ struct PointExecuterOp
                KernelFunctionPtr computeFunction,
                const math::Transform& transform,
                const GroupIndex* const groupIndex,
-               std::vector<compiler::LeafLocalData::UniquePtr>& leafLocalData)
+               std::vector<compiler::LeafLocalData::UniquePtr>& leafLocalData,
+               const std::string& positionAttribute)
         : mComputeFunction(computeFunction)
         , mCustomData(customData)
         , mTransform(transform)
         , mGroupIndex(groupIndex)
         , mAttributeRegistry(attributeRegistry)
-        , mLeafLocalData(leafLocalData) {}
+        , mLeafLocalData(leafLocalData)
+        , mPositionAttribute(positionAttribute) {}
+
+    template<typename FilterT = openvdb::points::NullFilter>
+    inline void
+    initPositions(LeafNode& leaf, const FilterT& filter = FilterT()) const
+    {
+        const points::AttributeHandle<Vec3f>::Ptr
+            positions = points::AttributeHandle<Vec3f>::
+                create(leaf.constAttributeArray("P"));
+        const points::AttributeWriteHandle<Vec3f>::Ptr
+            pws = points::AttributeWriteHandle<Vec3f>::
+                create(leaf.attributeArray(mPositionAttribute));
+
+        for (auto iter = leaf.beginIndexAll(filter); iter; ++iter) {
+            const Index idx = *iter;
+            const openvdb::Vec3f pos = positions->get(idx) + iter.getCoord().asVec3s();
+            pws->set(idx, mTransform.indexToWorld(pos));
+        }
+    }
 
     // UseGroup = true
     template<bool UseG>
@@ -377,15 +396,10 @@ struct PointExecuterOp
         PointFunctionArguments args(mCustomData, leaf.attributeSet(), leaf.getLastValue());
 
         // add attributes based on the order and existence in the attribute registry
-        // except for position, P, which is handled specially
 
         for (const auto& iter : mAttributeRegistry.data()) {
-            if (iter.name() != "P") {
-                addAttributeHandle(args, leaf, iter.name(), iter.type(), iter.writes());
-            }
-            else {
-                args.addNullAttribHandle(); // empty handle offset for position
-            }
+            const std::string& name = (iter.name() == "P" ? mPositionAttribute : iter.name());
+            addAttributeHandle(args, leaf, name, iter.type(), iter.writes());
         }
 
         const auto& map = leaf.attributeSet().descriptor().groupMap();
@@ -419,13 +433,15 @@ struct PointExecuterOp
             }
         }
 
-        // if we are using position we need to initialise the local storage
+        // if we are using position we need to initialise the world space storage
 
         if (UseTransform && UseGroup) {
-            GroupFilter filter(*mGroupIndex);
-            args.mLeafLocalData->initPositions<GroupFilter>(leaf, mTransform, filter);
+            const GroupFilter filter(*mGroupIndex);
+            this->initPositions(leaf, filter);
         }
-        else if (UseTransform) args.mLeafLocalData->initPositions(leaf, mTransform);
+        else if (UseTransform) {
+            this->initPositions(leaf);
+        }
 
         execute<UseGroup>(leaf, args);
 
@@ -452,6 +468,7 @@ private:
     const GroupIndex* const     mGroupIndex;
     const AttributeRegistry&    mAttributeRegistry;
     std::vector<compiler::LeafLocalData::UniquePtr>& mLeafLocalData;
+    const std::string&          mPositionAttribute;
 };
 
 void appendMissingAttributes(points::PointDataGrid& grid,
@@ -535,7 +552,18 @@ void PointExecutable::execute(openvdb::points::PointDataGrid& grid,
 
     appendMissingAttributes(grid, *mAttributeRegistry);
 
+    // create temporary world space position attribute if P is being accessed
+
     const bool usingPosition = mAttributeRegistry->isRegistered("P", ast::tokens::VEC3F);
+    std::string positionAttribute = "P";
+
+    if (usingPosition /*mAttributeRegistry->isWritable("P", ast::tokens::VEC3F)*/) {
+        const points::AttributeSet::Descriptor& desc =
+            leafIter->attributeSet().descriptor();
+        positionAttribute = desc.uniqueName("__P");
+        points::appendAttribute<openvdb::Vec3f>(grid.tree(), positionAttribute);
+    }
+
     const bool usingGroup(static_cast<bool>(group) ? !group->empty() : false);
     const math::Transform& transform = grid.transform();
 
@@ -564,13 +592,13 @@ void PointExecutable::execute(openvdb::points::PointDataGrid& grid,
         if (!usingPosition) {
             PointExecuterOp</*UseTransform*/false, /*UseGroup*/false>
                 executerOp(*mAttributeRegistry, mCustomData, compute, transform, &groupIndex,
-                    leafLocalData);
+                    leafLocalData, positionAttribute);
             leafManager.foreach(executerOp);
         }
         else {
             PointExecuterOp</*UseTransform*/true, /*UseGroup*/false>
                 executerOp(*mAttributeRegistry, mCustomData, compute, transform, &groupIndex,
-                    leafLocalData);
+                    leafLocalData, positionAttribute);
             leafManager.foreach(executerOp);
         }
     }
@@ -590,14 +618,14 @@ void PointExecutable::execute(openvdb::points::PointDataGrid& grid,
         if (!usingPosition && usingGroup) {
             PointExecuterOp</*UseTransform*/false, /*UseGroup*/true>
                 executerOp(*mAttributeRegistry, mCustomData, compute, transform, &groupIndex,
-                    leafLocalData);
+                    leafLocalData, positionAttribute);
             leafManager.foreach(executerOp);
         }
         else {
             // usingGroup && usingPosition
             PointExecuterOp</*UseTransform*/true, /*UseGroup*/true>
                 executerOp(*mAttributeRegistry, mCustomData, compute, transform, &groupIndex,
-                    leafLocalData);
+                    leafLocalData, positionAttribute);
             leafManager.foreach(executerOp);
         }
     }
@@ -671,14 +699,17 @@ void PointExecutable::execute(openvdb::points::PointDataGrid& grid,
     if (mAttributeRegistry->isWritable("P", ast::tokens::VEC3F)) {
         if (usingGroup) {
             openvdb::points::GroupFilter filter(groupIndex);
-            PointExecuterDeformer<openvdb::points::GroupFilter> deformer(leafLocalData, filter);
+            PointExecuterDeformer<openvdb::points::GroupFilter> deformer(positionAttribute, filter);
             openvdb::points::movePoints(grid, deformer);
         }
         else {
-            openvdb::points::NullFilter nullFilter;
-            PointExecuterDeformer<openvdb::points::NullFilter> deformer(leafLocalData, nullFilter);
+            PointExecuterDeformer<> deformer(positionAttribute);
             openvdb::points::movePoints(grid, deformer);
         }
+    }
+    if (usingPosition) {
+        // remove temporary world space storage
+        points::dropAttribute(grid.tree(), positionAttribute);
     }
 }
 
