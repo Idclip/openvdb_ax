@@ -115,9 +115,11 @@ struct PointFunctionArguments
 
     PointFunctionArguments(const CustomData::ConstPtr& customData,
                            const points::AttributeSet& attributeSet,
+                           const math::Transform& transform,
                            const size_t pointCount)
         : mCustomData(customData)
         , mAttributeSet(&attributeSet)
+        , mTransform(&transform)
         , mIndex(0)
         , mLeafLocalData(new compiler::LeafLocalData(pointCount))
         , mVoidAttributeHandles()
@@ -141,7 +143,8 @@ struct PointFunctionArguments
             static_cast<FunctionTraitsT::Arg<2>::Type>(mIndex),
             static_cast<FunctionTraitsT::Arg<3>::Type>(mVoidAttributeHandles.data()),
             static_cast<FunctionTraitsT::Arg<4>::Type>(mVoidGroupHandles.data()),
-            static_cast<FunctionTraitsT::Arg<5>::Type>(mLeafLocalData.get()));
+            static_cast<FunctionTraitsT::Arg<5>::Type>(mLeafLocalData.get()),
+            static_cast<FunctionTraitsT::Arg<6>::Type>(mTransform));
     }
 
     template <typename ValueT>
@@ -187,6 +190,7 @@ struct PointFunctionArguments
 
     const CustomData::ConstPtr mCustomData;
     const points::AttributeSet* const mAttributeSet;
+    const math::Transform* const mTransform;
     uint64_t mIndex;
     compiler::LeafLocalData::UniquePtr mLeafLocalData;
 
@@ -393,7 +397,8 @@ struct PointExecuterOp
 
     void operator()(LeafNode& leaf, size_t idx) const
     {
-        PointFunctionArguments args(mCustomData, leaf.attributeSet(), leaf.getLastValue());
+        PointFunctionArguments args(mCustomData, leaf.attributeSet(),
+            mTransform, leaf.getLastValue());
 
         // add attributes based on the order and existence in the attribute registry
 

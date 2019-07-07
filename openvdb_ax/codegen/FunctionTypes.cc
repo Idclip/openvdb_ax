@@ -313,6 +313,15 @@ FunctionSignatureBase::implicitMatch(const std::vector<llvm::Type*>& input,
             llvm::Type* contained2 = type2->getContainedType(0);
             if (contained1 == contained2) continue;
 
+            // @note  For functions which take vectors/matrices as pointers
+            //   and modifies the arguments, implicit casting is not supported,
+            //   as the argument will be essentially re-allocated as the correct
+            //   type. If the argument is read only, we can implcitly convert it.
+            //   The framework for detemining this is currently missing, so
+            //   we have to fail here (and act like the argument is always
+            //   being written to)
+            return false;
+
             // if the pointers are different, see if they are arrays and  check
             // types and size - only one layer of array casting indirection is supported
             // as arrays are expected to be in a pointer when passed in as arguments

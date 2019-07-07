@@ -78,7 +78,8 @@ struct PointKernel
              uint64_t,
              void**,
              void**,
-             void*);
+             void*,
+             const void* const); // transform
 
     using FunctionT = std::function<Signature>;
     using FunctionTraitsT = codegen::FunctionTraits<FunctionT>;

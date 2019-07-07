@@ -73,7 +73,8 @@ PointKernel::argumentKeys()
         "point_index",
         "attribute_handles",
         "group_handles",
-        "leaf_data"
+        "leaf_data",
+        "transform"
     };
 
     return arguments;

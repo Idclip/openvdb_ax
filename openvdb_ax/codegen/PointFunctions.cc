@@ -354,12 +354,14 @@ struct GetAttribute : public FunctionBase
         DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_attribute<openvdb::math::Mat3<double>>, 1),
         DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_attribute<openvdb::math::Mat4<float>>, 1),
         DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_attribute<openvdb::math::Mat4<double>>, 1),
-        DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_attribute_string, 1)
+        DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_attribute_string, 1),
+        DECLARE_FUNCTION_SIGNATURE_OUTPUT(get_position, 1)
     }) {}
 
 private:
     template <typename ValueT>
-    inline static void get_attribute(void* attributeHandle, const uint64_t index, ValueT* value)
+    inline static void
+    get_attribute(void* attributeHandle, const uint64_t index, ValueT* value)
     {
         // typedef is a read handle. As write handles are derived types this
         // is okay and lets us define the handle types outside IR for attributes that are
@@ -375,12 +377,79 @@ private:
         (*value) = handle->get(static_cast<openvdb::Index>(index));
     }
 
+    inline static void
+    get_position(void* attributeHandle,
+        const uint64_t index,
+        const void* const transform,
+        const int32_t (*coord)[3],
+        openvdb::math::Vec3<float>* value)
+    {
+        assert(transform);
+        get_attribute(attributeHandle, index, value);
+        value->x() += static_cast<float>((*coord)[0]);
+        value->y() += static_cast<float>((*coord)[1]);
+        value->z() += static_cast<float>((*coord)[2]);
+        *value = static_cast<const openvdb::math::Transform*>(transform)->indexToWorld(*value);
+    }
+
     static void get_attribute_string(void *attributeHandle,
                                      const uint64_t index,
                                      uint8_t* value,
                                      const void* const newDataPtr);
 };
 
+struct IndexToWorld : public FunctionBase
+{
+    struct Internal : public FunctionBase {
+        DEFINE_IDENTIFIER_CONTEXT_DOC("internal_indextoworld", FunctionBase::Point, "")
+        inline static Ptr create(const FunctionOptions&) { return Ptr(new Internal()); }
+        Internal() : FunctionBase({
+            DECLARE_FUNCTION_SIGNATURE_OUTPUT(Internal::itow<openvdb::math::Vec3<float>>, 1),
+            DECLARE_FUNCTION_SIGNATURE_OUTPUT(Internal::itow<openvdb::math::Vec3<double>>, 1)
+        }) {}
+
+    private:
+        template <typename T>
+        static void itow(const T* value, const void* transform, T* result)
+        {
+            assert(transform);
+            *result = static_cast<const openvdb::math::Transform*>
+                (transform)->indexToWorld(*value);
+        }
+    };
+
+    DEFINE_IDENTIFIER_CONTEXT_DOC("indextoworld", FunctionBase::Point,
+        "Transform an index space position to world space")
+
+    inline static Ptr create(const FunctionOptions&) {
+        return Ptr(new IndexToWorld());
+    }
+
+    IndexToWorld() : FunctionBase({
+        FunctionSignature<V3F*(V3F*)>::create
+            (nullptr, std::string("indextoworldv3f"), 0),
+        FunctionSignature<V3D*(V3D*)>::create
+            (nullptr, std::string("indextoworldv3d"), 0)
+    }) {}
+
+    inline void
+    getDependencies(std::vector<std::string>& identifiers) const override {
+        identifiers.emplace_back("internal_indextoworld");
+    }
+
+    llvm::Value*
+    generate(const std::vector<llvm::Value*>& args,
+         const std::unordered_map<std::string, llvm::Value*>& globals,
+         llvm::IRBuilder<>& B) const override
+    {
+        std::vector<llvm::Value*> internalArgs(args);
+        internalArgs.emplace_back(globals.at("transform"));
+        Internal func;
+        std::vector<llvm::Value*> results;
+        func.execute(internalArgs, globals, B, &results);
+        return results.front();
+     }
+};
 
 namespace point_functions_internal
 {
@@ -573,6 +642,9 @@ void insertVDBPointFunctions(FunctionRegistry& registry,
     add("ingroup", InGroup::create, false);
     add("removefromgroup", RemoveFromGroup::create, false);
     add("deletepoint", DeletePoint::create, false);
+
+    add("indextoworld", IndexToWorld::create, false);
+    add("internal_indextoworld", IndexToWorld::Internal::create, true);
 
     // internal point functions
 
