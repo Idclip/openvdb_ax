@@ -2,7 +2,6 @@
 
 set -ex
 
-# As recommended by https://apt.llvm.org/
-wget https://apt.llvm.org/llvm.sh
-chmod +x llvm.sh
-sudo ./llvm.sh $LLVM_VERSION
+wget -O llvm-$LLVM_VERSION.tar.xz https://releases.llvm.org/$LLVM_VERSION/clang+llvm-$LLVM_VERSION-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+tar xf llvm-$LLVM_VERSION.tar.xz --directory $LLVM_ROOT_DIR --strip 1
+rm -f llvm-$LLVM_VERSION.tar.xz
