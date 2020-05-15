@@ -18,7 +18,7 @@ jobs:
         image: ['2019']
         compiler: ['g++']
         build: ['Release']
-        llvm: [8]
+        llvm: ['8.0.0']
     steps:
       - uses: actions/checkout@v1
       - name: install_llvm
