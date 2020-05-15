@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-16.04
     name: ${{ matrix.image }}-${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
     container:
-      image: aswf/ci-openvdb:${{ matrix.image }}
+      image: aswf/ci-vfxall:${{ matrix.image }}
     env:
       LLVM_VERSION: ${{ matrix.llvm }}
     strategy:
       matrix:
-        image: ['2018', '2019', '2020']
+        image: ['2019', '2020']
         compiler: ['g++', 'clang++']
         build: ['Release', 'Debug']
         llvm: [5, 6, 7, 8, 9]
