@@ -13,10 +13,10 @@ jobs:
       LLVM_VERSION: ${{ matrix.llvm }}
     strategy:
       matrix:
-        image: ['2019', '2020']
-        compiler: ['g++', 'clang++']
-        build: ['Release', 'Debug']
-        llvm: [5, 6, 7, 8, 9]
+        image: ['2019']
+        compiler: ['g++']
+        build: ['Release']
+        llvm: [8]
     steps:
       - uses: actions/checkout@v1
       - name: install_llvm
