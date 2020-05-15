@@ -11,8 +11,9 @@ jobs:
       image: aswf/ci-vfxall:${{ matrix.image }}
     env:
       LLVM_VERSION: ${{ matrix.llvm }}
-      LLVM_ROOT_DIR: ${{ env.HOME }}/llvm-${{ env.LLVM_VERSION }}
-      LLVM_DIR: ${{ env.LLVM_ROOT_DIR }}/share/llvm/cmake
+      LLVM_ROOT_DIR: /github/home/llvm-${{ matrix.llvm }}
+      LLVM_DIR: /github/home/llvm-${{ matrix.llvm }}/share/llvm/cmake
+      CXX: ${{ matrix.compiler }}
     strategy:
       matrix:
         image: ['2019']
@@ -26,7 +27,6 @@ jobs:
       - name: build
         run: |
           ./ci/build.sh \
-            -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DOPENVDB_CXX_STRICT=ON
       - name: test
