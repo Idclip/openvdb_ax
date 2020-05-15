@@ -208,6 +208,6 @@ matrix:
       env: LLVM_VERSION=6
 
 install:
-  - travis/install-openvdb.sh
+  - ci/install-openvdb.sh
 
-script: travis/install.sh
+script: ci/install.sh

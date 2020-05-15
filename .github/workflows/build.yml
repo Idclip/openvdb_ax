@@ -1,0 +1,31 @@
+
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  linux-core:
+    runs-on: ubuntu-16.04
+    name: ${{ matrix.image }}-${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
+    container:
+      image: aswf/ci-vfxall:${{ matrix.image }}
+    env:
+      LLVM_VERSION: ${{ matrix.llvm }}
+    strategy:
+      matrix:
+        image: ['2018', '2019', '2020']
+        compiler: ['g++', 'clang++']
+        build: ['Release', 'Debug']
+        llvm: [5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v1
+      - name: install_llvm
+        run: ./ci/install_llvm.sh
+      - name: build
+        run: |
+          ./ci/build.sh \
+            -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+            -DOPENVDB_CXX_STRICT=ON
+      - name: test
+        run: cd build && ctest -V
