@@ -11,8 +11,8 @@ jobs:
       image: aswf/ci-vfxall:${{ matrix.image }}
     env:
       LLVM_VERSION: ${{ matrix.llvm }}
-      LLVM_ROOT_DIR: $HOME/llvm-$LLVM_VERSION
-      LLVM_DIR: $LLVM_ROOT_DIR/share/llvm/cmake
+      LLVM_ROOT_DIR: ${{ env.HOME }}/llvm-${{ env.LLVM_VERSION }}
+      LLVM_DIR: ${{ env.LLVM_ROOT_DIR }}/share/llvm/cmake
     strategy:
       matrix:
         image: ['2019']
