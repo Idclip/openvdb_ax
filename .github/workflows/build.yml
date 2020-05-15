@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-16.04
     name: ${{ matrix.image }}-${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
     container:
-      image: aswf/ci-vfxall:${{ matrix.image }}
+      image: aswf/ci-openvdb:${{ matrix.image }}
     env:
       LLVM_VERSION: ${{ matrix.llvm }}
     strategy:
