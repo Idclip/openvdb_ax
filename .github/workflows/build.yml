@@ -11,18 +11,21 @@ jobs:
       image: aswf/ci-vfxall:${{ matrix.image }}
     env:
       CXX: ${{ matrix.compiler }}
+      CXXFLAGS: -D_GLIBCXX_USE_CXX11_ABI=0
     strategy:
       matrix:
-        image: ['2019', '2020']
+        image: ['2019']
         compiler: ['g++', 'clang++']
-        build: ['Release', 'Debug']
-        llvm: ['6.0.0', '7.0.0', '8.0.0', '9.0.0']
+        build: ['Release']
+        llvm: ['8.0.0']
+      fail-fast: false
     steps:
       - uses: actions/checkout@v1
       - name: install_llvm
         run: ./ci/install_llvm.sh ${{ matrix.llvm }} /github/home/llvm-${{ matrix.llvm }}
       - name: build
         run: |
+          export PATH=/github/home/llvm-${{ matrix.llvm }}/bin:$PATH
           ./ci/build.sh \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DLLVM_DIR=/github/home/llvm-${{ matrix.llvm }}/lib/cmake/llvm \
