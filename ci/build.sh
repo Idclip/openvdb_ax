@@ -6,7 +6,9 @@ mkdir build
 mkdir -p $HOME/install
 cd build
 
+$CXX -v
 cmake --version
+
 cmake \
     -D OPENVDB_BUILD_AX=ON \
     -D OPENVDB_BUILD_AX_UNITTESTS=ON \
