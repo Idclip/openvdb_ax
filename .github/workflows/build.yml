@@ -27,8 +27,7 @@ jobs:
         run: |
           ./ci/build.sh \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
-            -DLLVM_ROOT=/github/home/llvm-${{ matrix.llvm }} \
-            -DLLVM_DIR=/github/home/llvm-${{ matrix.llvm }}/share/llvm/cmake \
+            -DLLVM_DIR=/github/home/llvm-${{ matrix.llvm }}/lib/cmake/llvm \
             -DOPENVDB_CXX_STRICT=ON
       - name: test
         run: cd build && ctest -V
