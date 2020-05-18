@@ -6,7 +6,7 @@ on: [push, pull_request]
 jobs:
   linux-core:
     runs-on: ubuntu-16.04
-    name: ${{ matrix.image }}-${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
+    name: linux-${{ matrix.image }}-${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
     container:
       image: aswf/ci-vfxall:${{ matrix.image }}
     env:
@@ -27,6 +27,7 @@ jobs:
         run: |
           ./ci/build.sh \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+            -DLLVM_ROOT=/github/home/llvm-${{ matrix.llvm }} \
             -DLLVM_DIR=/github/home/llvm-${{ matrix.llvm }}/share/llvm/cmake \
             -DOPENVDB_CXX_STRICT=ON
       - name: test
