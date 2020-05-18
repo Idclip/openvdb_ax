@@ -19,5 +19,5 @@ cmake \
     $@ \
     ../
 
-make -j2
+make -j2 VERBOSE=1
 make install -j2
