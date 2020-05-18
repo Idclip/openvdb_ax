@@ -2,6 +2,8 @@
 
 set -ex
 
+# Download, build and install LLVM from source
+
 LLVM_VERSION=$1
 LLVM_ROOT_DIR=$2
 if [ -z $LLVM_VERSION ]; then

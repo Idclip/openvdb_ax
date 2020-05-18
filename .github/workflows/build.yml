@@ -1,12 +1,12 @@
 
-name: Build
+name: ci
 
 on: [push, pull_request]
 
 jobs:
   linux-core:
     runs-on: ubuntu-16.04
-    name: linux:${{ matrix.image }}-compiler:${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
+    name: linux-vfx:${{ matrix.image }}-compiler:${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
     container:
       image: aswf/ci-vfxall:${{ matrix.image }}
     env:
@@ -14,7 +14,7 @@ jobs:
       LLVM_DIR: /github/home/llvm-${{ matrix.llvm }}-${{ matrix.compiler }}
     strategy:
       matrix:
-        image: ['2019']
+        image: ['2019', '2020']
         compiler: ['g++', 'clang++']
         build: ['Release']
         llvm: ['6.0.0','7.0.0','8.0.0','9.0.0']
@@ -36,7 +36,33 @@ jobs:
         run: |
           ./ci/build.sh \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
-            -DLLVM_DIR=${{ env.LLVM_DIR }} \
-            -DOPENVDB_CXX_STRICT=ON
+            -DLLVM_DIR=${{ env.LLVM_DIR }}
+      - name: test
+        run: cd build && ctest -V
+
+  macos-core:
+    runs-on: macos-10.15
+    name: macos-compiler:${{ matrix.compiler }}-llvm:${{ matrix.llvm }}-${{ matrix.build }}
+    env:
+      CXX: ${{ matrix.compiler }}
+      OPENVDB_DIR: /github/home/openvdb-7.0.0-${{ matrix.compiler }}
+    strategy:
+      matrix:
+        compiler: ['g++', 'clang++']
+        build: ['Release']
+        llvm: ['6','7','8','9']
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - name: install_deps
+        run: ./ci/install_deps_macos.sh ${{ matrix.llvm }}
+      - name: install_openvdb
+        run: ./ci/install_openvdb.sh 7.0.0 ${{ env.OPENVDB_DIR }}
+      - name: build
+        run: |
+          ./ci/build.sh \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
+            -DLLVM_DIR=/usr/local/opt/llvm@${{ matrix.llvm }}/lib/cmake/llvm \
+            -DOPENVDB_ROOT=${{ env.OPENVDB_DIR }}
       - name: test
         run: cd build && ctest -V
