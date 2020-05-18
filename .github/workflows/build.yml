@@ -26,6 +26,7 @@ jobs:
       - name: build
         run: |
           export PATH=/github/home/llvm-${{ matrix.llvm }}/bin:$PATH
+          echo $PATH
           ./ci/build.sh \
             -DCMAKE_BUILD_TYPE=${{ matrix.build }} \
             -DLLVM_DIR=/github/home/llvm-${{ matrix.llvm }}/lib/cmake/llvm \
