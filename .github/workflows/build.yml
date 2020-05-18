@@ -24,7 +24,7 @@ jobs:
       - name: install_llvm
         run: ./ci/install_llvm.sh ${{ matrix.llvm }} /github/home/llvm-${{ matrix.llvm }}
       - name: install_libedit
-        run: yum install libedit-devel
+        run: yum -y install libedit-devel
       - name: build
         run: |
           ./ci/build.sh \
