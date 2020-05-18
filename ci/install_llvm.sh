@@ -13,7 +13,7 @@ if [ -z $LLVM_ROOT_DIR ]; then
     exit -1
 fi
 
-wget -O llvm-$LLVM_VERSION.tar.xz https://releases.llvm.org/$LLVM_VERSION/clang+llvm-$LLVM_VERSION-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+wget -O llvm-$LLVM_VERSION.tar.xz https://releases.llvm.org/$LLVM_VERSION/clang+llvm-$LLVM_VERSION-x86_64-linux-gnu-ubuntu-18.04.tar.xz
 
 echo "Installing LLVM $LLVM_VERSION -> $LLVM_ROOT_DIR"
 mkdir -p $LLVM_ROOT_DIR
