@@ -16,7 +16,7 @@ fi
 echo "Downloading LLVM $LLVM_VERSION src..."
 
 wget -O llvm-$LLVM_VERSION.src.tar.xz https://releases.llvm.org/$LLVM_VERSION/llvm-$LLVM_VERSION.src.tar.xz
-tar -xf llvm-$LLVM_VERSION.src.tar.xz --directory llvm-$LLVM_VERSION.src
+tar -xf llvm-$LLVM_VERSION.src.tar.xz
 rm -f llvm-$LLVM_VERSION.src.tar.xz
 cd llvm-$LLVM_VERSION.src
 
