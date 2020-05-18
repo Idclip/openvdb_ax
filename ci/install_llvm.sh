@@ -13,9 +13,17 @@ if [ -z $LLVM_ROOT_DIR ]; then
     exit -1
 fi
 
-wget -O llvm-$LLVM_VERSION.tar.xz https://releases.llvm.org/$LLVM_VERSION/clang+llvm-$LLVM_VERSION-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+echo "Downloading LLVM $LLVM_VERSION src..."
 
-echo "Installing LLVM $LLVM_VERSION -> $LLVM_ROOT_DIR"
-mkdir -p $LLVM_ROOT_DIR
-tar xf llvm-$LLVM_VERSION.tar.xz --directory $LLVM_ROOT_DIR --strip 1
-rm -f llvm-$LLVM_VERSION.tar.xz
+wget -O llvm-$LLVM_VERSION.src.tar.xz https://releases.llvm.org/$LLVM_VERSION/llvm-$LLVM_VERSION.src.tar.xz
+tar -xf llvm-$LLVM_VERSION.src.tar.xz --directory llvm-$LLVM_VERSION.src
+rm -f llvm-$LLVM_VERSION.src.tar.xz
+cd llvm-$LLVM_VERSION.src
+
+echo "Building LLVM $LLVM_VERSION -> $LLVM_ROOT_DIR ..."
+
+mkdir -p .build
+cd .build
+cmake -DCMAKE_INSTALL_PREFIX=$LLVM_ROOT_DIR -DCMAKE_BUILD_TYPE=Release ../
+make -j2
+make install
