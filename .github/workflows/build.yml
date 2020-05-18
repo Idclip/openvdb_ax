@@ -17,7 +17,7 @@ jobs:
         image: ['2019']
         compiler: ['g++', 'clang++']
         build: ['Release']
-        llvm: ['8.0.0']
+        llvm: ['7.0.0']
       fail-fast: false
     steps:
       - uses: actions/checkout@v1
