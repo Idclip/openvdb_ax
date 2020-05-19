@@ -20,6 +20,7 @@ jobs:
         llvm: ['6.0.0','7.0.0','8.0.0','9.0.0']
         include:
           - image: '2020'
+            compiler: ['g++', 'clang++']
             build: 'Debug'
             llvm: '8.0.0'
       fail-fast: false
