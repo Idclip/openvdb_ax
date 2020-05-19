@@ -17,8 +17,8 @@ fi
 
 echo "Downloading OpenVDB $OPENVDB_VERSION src..."
 
-git clone --branch v$OPENVDB_VERSION https://github.com/AcademySoftwareFoundation/openvdb.git openvdb
-cd openvdb
+git clone --branch v$OPENVDB_VERSION https://github.com/AcademySoftwareFoundation/openvdb.git openvdb-$OPENVDB_VERSION.src
+cd openvdb-$OPENVDB_VERSION.src
 
 echo "Building OpenVDB $OPENVDB_VERSION -> $OPENVDB_ROOT_DIR ..."
 
@@ -39,4 +39,4 @@ cmake \
     ../
 
 make -j2
-sudo make install
+make install
