@@ -18,9 +18,14 @@ jobs:
         compiler: ['g++', 'clang++']
         build: ['Release']
         llvm: ['6.0.0','7.0.0','8.0.0','9.0.0']
+        # Debug builds
         include:
           - image: '2020'
-            compiler: ['g++', 'clang++']
+            compiler: 'g++'
+            build: 'Debug'
+            llvm: '8.0.0'
+          - image: '2020'
+            compiler: 'clang++'
             build: 'Debug'
             llvm: '8.0.0'
       fail-fast: false
@@ -55,8 +60,13 @@ jobs:
         compiler: ['g++', 'clang++']
         build: ['Release']
         llvm: ['6','7','8','9']
+        # Debug builds
         include:
-          - build: 'Debug'
+          - compiler: 'g++'
+            build: 'Debug'
+            llvm: '8'
+          - compiler: 'clang++'
+            build: 'Debug'
             llvm: '8'
       fail-fast: false
     steps:
