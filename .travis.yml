@@ -205,4 +205,4 @@ script:
     if [ "$TRAVIS_OS_NAME" = "osx" ]; then
       LLVM_DIR="/usr/local/opt/llvm@$LLVM_VERSION/lib/cmake/llvm";
     fi;
-    ci/build.sh -DCMAKE_BUILD_TYPE=Release -DLLVM_DIR=$LLVM_DIR
+    ci/build.sh -DCMAKE_BUILD_TYPE=Release -DOPENVDB_ROOT=$HOME/openvdb/install -DLLVM_DIR=$LLVM_DIR
