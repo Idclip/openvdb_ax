@@ -57,7 +57,7 @@ jobs:
       matrix:
         compiler: ['g++', 'clang++']
         build: ['Release']
-        llvm: ['7','8','9','10']
+        llvm: ['7','8','9','11']
         # Debug builds
         include:
           - compiler: 'g++'
