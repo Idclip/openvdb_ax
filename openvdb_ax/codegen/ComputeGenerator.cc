@@ -128,7 +128,7 @@ ComputeGenerator::ComputeGenerator(llvm::Module& module,
                                    Logger& logger)
     : mModule(module)
     , mContext(module.getContext())
-    , mBuilder(llvm::IRBuilder<>(module.getContext()))
+    , mBuilder(module.getContext())
     , mValues()
     , mBreakContinueStack()
     , mScopeIndex(1)
